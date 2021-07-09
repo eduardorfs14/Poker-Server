@@ -1,6 +1,9 @@
 {
   "name": "poker-websocket",
   "version": "1.0.0",
+  "engines": {
+    "node": "14.11.0x"
+  },
   "description": "",
   "main": "index.js",
   "scripts": {
