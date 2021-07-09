@@ -1,7 +1,7 @@
 import { Player } from "../interfaces/Player";
 
 export function getPlayersWithoutCards(players: Player[], player: Player) {
-  const filtredPlayers = players.filter(p => p.id !== player?.id);
+  const filtredPlayers = players.filter(p => p.databaseId !== player.databaseId);
 
   const playersWithoutCards = filtredPlayers.map(player => {
     return {
@@ -9,6 +9,7 @@ export function getPlayersWithoutCards(players: Player[], player: Player) {
       email: player.email,
       balance: player.balance,
       position: player.position,
+      folded: player.folded,
       avatarURL: player.avatarURL,
     }
   });

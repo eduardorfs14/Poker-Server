@@ -3,7 +3,7 @@ export interface Player {
   databaseId: string;
   email: string;
   balance: number;
-  avatarURL: string;
+  avatarURL: string | null;
   totalBetValue: number;
   folded: boolean;
   isTurn: boolean;

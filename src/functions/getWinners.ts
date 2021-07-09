@@ -28,9 +28,6 @@ export function getWinners(players: Player[], tableCards: string[]) {
       const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '');
       const playerHandCardsFormated: string = playerHand.toString().repeat(solvedHands.length).replace(/\s/g, '').replace(/([a-z][A-Z])/g, ',');
 
-      console.log(solvedHandsFormated);
-      console.log(playerHandCardsFormated.replace(/([a-z][0-9])/g, ','));
-
       if (solvedHandsFormated === playerHandCardsFormated.replace(/([a-z][0-9])/g, ',')) {
         winners.push(player);
       };

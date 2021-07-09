@@ -20,22 +20,26 @@ export function gameSetup(players: Player[]) {
     if (index === 7) player.position = 'CO';
     if (index === 8) player.position = 'DEALER';
 
-    if (players.length <= 1 && player.position === 'SB') {
-      players.forEach(player => {
-        player.isTurn = false;
-      });
-      player.isTurn = true;
-    } else if (players.length > 1 && player.position === 'UTG-1') {
-        players.forEach(player => {
-          player.isTurn = false;
-      });
-      player.isTurn = true;
-    } else {
-      player.isTurn = false;
-    }
-
     player.folded = false;
   });
+
+  if (players.length <= 2) {
+    players.forEach(player => {
+      player.isTurn = false;
+    });
+    const sb = players.find(player => player.position === 'SB');
+    if (sb) {
+      sb.isTurn = true;
+    }
+  } else if (players.length >= 3) {
+    players.forEach(player => {
+        player.isTurn = false;
+    });
+    const utg1 = players.find(player => player.position === 'UTG-1');
+    if (utg1) {
+      utg1.isTurn = true;
+    }
+  }
 
   return {
     deck

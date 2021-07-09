@@ -10,11 +10,15 @@ export function passTurn(player: Player, table: Table) {
     const nextPlayerThatDidNotFold = table.players.find(player => player.folded === false);
     if (nextPlayerThatDidNotFold) {
       nextPlayerThatDidNotFold.isTurn = true;
+      const socket = table.sockets.find(socket => socket.id === nextPlayerThatDidNotFold.id)
+      socket?.emit('your_turn');
     }
   } else {
     const nextPlayerThatDidNotFold = table.players.find((player, index) => player.folded === false && playerIndex < index)
     if (nextPlayerThatDidNotFold) {
       nextPlayerThatDidNotFold.isTurn = true;
+      const socket = table.sockets.find(socket => socket.id === nextPlayerThatDidNotFold.id)
+      socket?.emit('your_turn');
     }
   }
 }
