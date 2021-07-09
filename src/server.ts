@@ -38,12 +38,18 @@ io.on('connection', async (socket: Socket) => {
     }
 
     socket.on('player', async (newPlayer: Player) => {
+      // Verificar se a mesa já está cheia
+      if (table.players.length >= table.maxPlayers) {
+        socket.emit('error_msg', 'Mesa já está cheia');
+        return;
+      }
+
       // Verificar se player já está na mesa
-      // const playerExists = table.players.find(player => player.databaseId === newPlayer.id);
-      // if (playerExists) {
-      //   socket.emit('error_msg', 'Você já está na mesa');
-      //   return;
-      // }
+      const playerExists = table.players.find(player => player.databaseId === newPlayer.id);
+      if (playerExists) {
+        socket.emit('error_msg', 'Você já está na mesa');
+        return;
+      }
       
       /* 
         Para o jogador não entrar 2 vezes na mesa ao clicar muito rapido no botão de entrar na mesa
