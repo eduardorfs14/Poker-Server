@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model poker_tables {
+  id         String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name       String  @db.VarChar
+  bigBlind   Int
+  minPlayers Int     @default(2)
+  maxPlayers Int     @default(9)
+  active     Boolean @default(false)
+  houseSlice Int     @default(2)
+}
+
+model users {
+  id         String  @id @db.Uuid
+  email      String
+  balance    Int     @default(0)
+  avatar_url String? @default("https://gtjkyibsezftnohtfdxp.supabase.co/storage/v1/object/sign/avatars/8bb8fbad389f6e38165751fe43659169fe688dda_full.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJhdmF0YXJzLzhiYjhmYmFkMzg5ZjZlMzgxNjU3NTFmZTQzNjU5MTY5ZmU2ODhkZGFfZnVsbC5qcGciLCJpYXQiOjE2MjUxODQxMTEsImV4cCI6MTk0MDU0NDExMX0.3hta3G6SJCohVYJpXrAGFOnRrS8V0ikCEHc2gBostTQ") @db.VarChar
+}
