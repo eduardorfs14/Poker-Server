@@ -37,12 +37,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startRound = void 0;
+var client_1 = require("@prisma/client");
+var decrementTimer_1 = require("./decrementTimer");
 var emitAllPlayersForEachSocket_1 = require("./emitAllPlayersForEachSocket");
 var emitCardsForEachSocket_1 = require("./emitCardsForEachSocket");
 var gameSetup_1 = require("./gameSetup");
-function startRound(table, socket, isNewRound) {
+var prisma = new client_1.PrismaClient();
+function startRound(table, socket, isNewRound, justFolded) {
     return __awaiter(this, void 0, void 0, function () {
-        var deck, sb_1, socket_1, utg1_1, socket_2;
+        var deck, sb_1, socket_1, interval, utg1_1, socket_2, interval;
+        var _this = this;
         return __generator(this, function (_a) {
             deck = gameSetup_1.gameSetup(table.players).deck;
             if (table.players.length <= 2) {
@@ -53,7 +57,15 @@ function startRound(table, socket, isNewRound) {
                 if (sb_1) {
                     sb_1.isTurn = true;
                     socket_1 = table.sockets.find(function (socket) { return socket.id === sb_1.id; });
-                    socket_1 === null || socket_1 === void 0 ? void 0 : socket_1.emit('your_turn');
+                    if (!socket_1) {
+                        return [2 /*return*/];
+                    }
+                    socket_1.emit('your_turn');
+                    socket_1.emit('player', sb_1);
+                    interval = decrementTimer_1.decrementTimer(sb_1, table, socket_1);
+                    if (justFolded) {
+                        clearInterval(interval);
+                    }
                 }
             }
             else if (table.players.length >= 3) {
@@ -64,28 +76,49 @@ function startRound(table, socket, isNewRound) {
                 if (utg1_1) {
                     utg1_1.isTurn = true;
                     socket_2 = table.sockets.find(function (socket) { return socket.id === utg1_1.id; });
-                    socket_2 === null || socket_2 === void 0 ? void 0 : socket_2.emit('your_turn');
+                    if (!socket_2) {
+                        return [2 /*return*/];
+                    }
+                    socket_2.emit('your_turn');
+                    socket_2.emit('player', utg1_1);
+                    interval = decrementTimer_1.decrementTimer(utg1_1, table, socket_2);
+                    if (justFolded) {
+                        clearInterval(interval);
+                    }
                 }
             }
-            table.players.forEach(function (player) {
-                // Adicionar propriedade "isTurn" aos "players"
-                if (isNewRound) {
-                    // Adicionar propriedade "totalBetValue" ao "player"
-                    if (player.position === 'SB') {
-                        player.totalBetValue = (table.bigBlind / 2);
+            table.players.forEach(function (player) { return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            if (!isNewRound) return [3 /*break*/, 6];
+                            if (!(player.position === 'SB')) return [3 /*break*/, 2];
+                            player.totalBetValue = (table.bigBlind / 2);
+                            player.balance -= (table.bigBlind / 2);
+                            return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })];
+                        case 1:
+                            _a.sent();
+                            return [3 /*break*/, 5];
+                        case 2:
+                            if (!(player.position === 'BB')) return [3 /*break*/, 4];
+                            player.totalBetValue = table.bigBlind;
+                            player.balance -= table.bigBlind;
+                            return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })];
+                        case 3:
+                            _a.sent();
+                            return [3 /*break*/, 5];
+                        case 4:
+                            player.totalBetValue = 0;
+                            _a.label = 5;
+                        case 5: return [3 /*break*/, 7];
+                        case 6:
+                            // Adicionar propriedade "totalBetValue" aos "players"
+                            player.totalBetValue = 0;
+                            _a.label = 7;
+                        case 7: return [2 /*return*/];
                     }
-                    else if (player.position === 'BB') {
-                        player.totalBetValue = table.bigBlind;
-                    }
-                    else {
-                        player.totalBetValue = 0;
-                    }
-                }
-                else {
-                    // Adicionar propriedade "totalBetValue" aos "players"
-                    player.totalBetValue = 0;
-                }
-            });
+                });
+            }); });
             table.roundStatus = true;
             isNewRound ? table.highestBet = (table.bigBlind) : table.highestBet = 0;
             isNewRound ? table.totalHighestBet = (table.bigBlind) : table.totalHighestBet = 0;

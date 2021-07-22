@@ -29,6 +29,7 @@ function gameSetup(players) {
         if (index === 8)
             player.position = 'DEALER';
         player.folded = false;
+        player.timer = 45;
     });
     if (players.length <= 2) {
         players.forEach(function (player) {

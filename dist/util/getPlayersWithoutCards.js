@@ -6,6 +6,7 @@ function getPlayersWithoutCards(players, player) {
     var playersWithoutCards = filtredPlayers.map(function (player) {
         return {
             id: player.id,
+            name: player.name,
             email: player.email,
             balance: player.balance,
             position: player.position,

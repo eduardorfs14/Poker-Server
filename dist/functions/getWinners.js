@@ -23,9 +23,9 @@ function getWinners(players, tableCards) {
             }
             ;
             var playerHand = getCombination_1.getCombination(player.cards, tableCards);
-            var solvedHandsFormated = solvedHands.toString().replace(/\s/g, '');
-            var playerHandCardsFormated = playerHand.toString().repeat(solvedHands.length).replace(/\s/g, '').replace(/([a-z][A-Z])/g, ',');
-            if (solvedHandsFormated === playerHandCardsFormated.replace(/([a-z][0-9])/g, ',')) {
+            var solvedHandsFormated = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');
+            var playerHandCardsFormated = playerHand.toString().repeat(solvedHands.length).replace(/\s/g, '');
+            if (solvedHandsFormated === playerHandCardsFormated) {
                 winners.push(player);
             }
             ;
@@ -38,8 +38,9 @@ function getWinners(players, tableCards) {
         }
         ;
         var playerHand = getCombination_1.getCombination(player.cards, tableCards);
-        var solvedHandsFormated = solvedHands.toString().replace(/\s/g, '');
-        var playerHandCardsFormated = playerHand.cards.toString().replace(/\s/g, '');
+        var solvedHandsFormated = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');
+        ;
+        var playerHandCardsFormated = playerHand.cards.toString().replace(/\s/g, '').replace(/,/g, '');
         if (solvedHandsFormated === playerHandCardsFormated) {
             winners.push(player);
         }

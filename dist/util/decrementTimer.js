@@ -1,15 +1,4 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -47,24 +36,37 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTables = void 0;
-var client_1 = require("@prisma/client");
-var prisma = new client_1.PrismaClient();
-function getTables() {
-    return __awaiter(this, void 0, void 0, function () {
-        var databaseTables, tables;
+exports.decrementTimer = void 0;
+var newBet_1 = require("./newBet");
+function decrementTimer(player, table, socket, bet) {
+    var _this = this;
+    var timerInterval = setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, prisma.poker_tables.findMany()];
+                case 0:
+                    // Garantir que o jogador passado para a funcão tem a vez de jogar
+                    if (!player.isTurn) {
+                        clearInterval(timerInterval);
+                        return [2 /*return*/];
+                    }
+                    console.log(player.name);
+                    console.log(player.timer);
+                    if (!(player.timer <= 0)) return [3 /*break*/, 2];
+                    // O Jogador FOLDOU
+                    clearInterval(timerInterval);
+                    player.timer = 45;
+                    return [4 /*yield*/, newBet_1.newBet('fold', player, table, socket)];
                 case 1:
-                    databaseTables = _a.sent();
-                    tables = databaseTables.map(function (table) {
-                        var roundPot = (table.bigBlind + (table.bigBlind / 2));
-                        return __assign(__assign({}, table), { highestBet: table.bigBlind, totalHighestBet: table.bigBlind, timer: 45, totalBets: 0, roundPot: roundPot, roundStatus: false, flopStatus: false, turnStatus: false, riverStatus: false, deck: [], cards: [], players: [], sockets: [] });
-                    });
-                    return [2 /*return*/, tables];
+                    _a.sent();
+                    return [2 /*return*/];
+                case 2:
+                    player.timer--;
+                    socket.emit('timer', { name: player.name, timeToPlay: player.timer });
+                    socket.to(table.id).emit('timer', { name: player.name, timeToPlay: player.timer });
+                    return [2 /*return*/];
             }
         });
-    });
+    }); }, 1000);
+    return timerInterval;
 }
-exports.getTables = getTables;
+exports.decrementTimer = decrementTimer;

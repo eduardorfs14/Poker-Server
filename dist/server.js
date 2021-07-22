@@ -47,13 +47,9 @@ var getPlayersWithoutCards_1 = require("./util/getPlayersWithoutCards");
 var passTurn_1 = require("./util/passTurn");
 var getPosition_1 = require("./util/getPosition");
 var startRound_1 = require("./util/startRound");
-var flop_1 = require("./util/flop");
-var turn_1 = require("./util/turn");
-var river_1 = require("./util/river");
-var showdown_1 = require("./util/showdown");
 var getTables_1 = require("./util/getTables");
-var movePlayersInTable_1 = require("./util/movePlayersInTable");
 var emitAllPlayersForEachSocket_1 = require("./util/emitAllPlayersForEachSocket");
+var newBet_1 = require("./util/newBet");
 var app = express_1.default();
 var httpServer = http_1.default.createServer(app);
 var io = new socket_io_1.default.Server(httpServer, { cors: {} });
@@ -78,16 +74,20 @@ io.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0,
                             return [2 /*return*/];
                         }
                         socket.on('player', function (newPlayer) { return __awaiter(void 0, void 0, void 0, function () {
-                            var databasePlayer, playerIndex_1, playerIndex;
+                            var playerExists, databasePlayer, playerIndex_1, playerIndex;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
-                                        // Verificar se player já está na mesa
-                                        // const playerExists = table.players.find(player => player.databaseId === newPlayer.id);
-                                        // if (playerExists) {
-                                        //   socket.emit('error_msg', 'Você já está na mesa');
-                                        //   return;
-                                        // }
+                                        // Verificar se a mesa já está cheia
+                                        if (table.players.length >= table.maxPlayers) {
+                                            socket.emit('error_msg', 'Mesa já está cheia');
+                                            return [2 /*return*/];
+                                        }
+                                        playerExists = table.players.find(function (player) { return player.databaseId === newPlayer.id; });
+                                        if (playerExists) {
+                                            socket.emit('error_msg', 'Você já está na mesa');
+                                            return [2 /*return*/];
+                                        }
                                         /*
                                           Para o jogador não entrar 2 vezes na mesa ao clicar muito rapido no botão de entrar na mesa
                                           envia o jogador sem conferir se ele é quem diz ser
@@ -140,141 +140,16 @@ io.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0,
                             });
                         }); });
                         socket.on('new_bet', function (bet) { return __awaiter(void 0, void 0, void 0, function () {
-                            var playersWhoDidNotFold, winner, newBalance_1, balance_1, bet_1, newBalance_2, balance_2, playersWhoDidNotFold, areBetsEqual, minBet, newBalance, balance;
                             return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        if (!table.roundStatus) {
-                                            socket.emit('error_msg', 'Rodada não ainda começou, aguarde...');
-                                            return [2 /*return*/];
-                                        }
-                                        else if (!(player === null || player === void 0 ? void 0 : player.isTurn)) {
-                                            socket.emit('error_msg', 'Você não pode apostar ainda...');
-                                            return [2 /*return*/];
-                                        }
-                                        else if (player === null || player === void 0 ? void 0 : player.folded) {
-                                            socket.emit('error_msg', 'Você já saiu da rodada, espere a próxima');
-                                            return [2 /*return*/];
-                                        }
-                                        if (!(bet === 'fold')) return [3 /*break*/, 4];
-                                        player.folded = true;
-                                        socket.emit('bet_response', 'Você saiu da rodada.');
-                                        playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
-                                        if (!(playersWhoDidNotFold.length === 1)) return [3 /*break*/, 2];
-                                        winner = playersWhoDidNotFold[0];
-                                        newBalance_1 = (winner.balance + table.roundPot) - ((table.roundPot / 100) * 2);
-                                        socket.emit('winner', winner.databaseId);
-                                        socket.to(tableId).emit('winner', winner.databaseId);
-                                        table.roundStatus = false;
-                                        return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance_1.toFixed(0)) }, where: { id: winner.databaseId } })];
-                                    case 1:
-                                        balance_1 = (_a.sent()).balance;
-                                        winner.balance = balance_1;
-                                        socket.emit('player', player);
-                                        emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
-                                        // Iniciar outro round...
-                                        movePlayersInTable_1.movePlayersInTable(table);
-                                        startRound_1.startRound(table, socket, true);
-                                        return [3 /*break*/, 3];
-                                    case 2:
-                                        passTurn_1.passTurn(player, table);
-                                        _a.label = 3;
-                                    case 3: return [2 /*return*/];
-                                    case 4:
-                                        if (!(bet === 'call' || bet === 'check')) return [3 /*break*/, 6];
-                                        bet_1 = table.totalHighestBet - player.totalBetValue;
-                                        if ((player === null || player === void 0 ? void 0 : player.balance) < bet_1) {
-                                            socket.emit('error_msg', 'Seu saldo não é suficiente!');
-                                            return [2 /*return*/];
-                                        }
-                                        ;
-                                        newBalance_2 = player.balance -= bet_1;
-                                        table.roundPot += bet_1;
-                                        table.totalBets++;
-                                        player.totalBetValue += bet_1;
-                                        // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
-                                        if (player.totalBetValue > table.totalHighestBet) {
-                                            table.totalHighestBet = player.totalBetValue;
-                                        }
-                                        if (bet_1 > table.highestBet) {
-                                            table.highestBet = bet_1;
-                                        }
-                                        // Passar o turno para outro jogador...
-                                        passTurn_1.passTurn(player, table);
-                                        // Emitir eventos para o front...
-                                        socket.emit('bet_response', 'Aposta feita com sucesso!');
-                                        socket.emit('round_pot', table.roundPot);
-                                        socket.to(tableId).emit('round_pot', table.roundPot);
-                                        return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance_2.toFixed(0)) }, where: { id: player.databaseId } })];
-                                    case 5:
-                                        balance_2 = (_a.sent()).balance;
-                                        player.balance = balance_2;
-                                        socket.emit('player', player);
-                                        emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
-                                        playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
-                                        areBetsEqual = playersWhoDidNotFold.every(function (player) { return player.totalBetValue === table.totalHighestBet; });
-                                        if (areBetsEqual && table.totalBets >= playersWhoDidNotFold.length) {
-                                            if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
-                                                flop_1.flop(table, socket);
-                                            }
-                                            else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
-                                                turn_1.turn(table, socket);
-                                            }
-                                            else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
-                                                river_1.river(table, socket);
-                                            }
-                                            else if (table.flopStatus && table.turnStatus && table.riverStatus) {
-                                                showdown_1.showdonw(table, socket);
-                                            }
-                                            ;
-                                        }
-                                        ;
-                                        return [2 /*return*/];
-                                    case 6:
-                                        minBet = (table.highestBet + table.bigBlind);
-                                        if (bet < minBet) {
-                                            socket.emit('error_msg', "Valor de aposta m\u00EDnimo: " + minBet);
-                                            return [2 /*return*/];
-                                        }
-                                        else if (typeof (bet) !== 'number') {
-                                            socket.emit('error_msg', 'Aposta invalida');
-                                            return [2 /*return*/];
-                                        }
-                                        // Verificação de saldo...
-                                        if (player.balance < bet) {
-                                            socket.emit('error_msg', 'Seu saldo não é suficiente!');
-                                            return [2 /*return*/];
-                                        }
-                                        ;
-                                        newBalance = player.balance -= bet;
-                                        table.roundPot += bet;
-                                        table.totalBets++;
-                                        player.totalBetValue += bet;
-                                        // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
-                                        if (player.totalBetValue > table.totalHighestBet) {
-                                            table.totalHighestBet = player.totalBetValue;
-                                        }
-                                        if (bet > table.highestBet) {
-                                            table.highestBet = bet;
-                                        }
-                                        // Passar o turno para outro jogador...
-                                        passTurn_1.passTurn(player, table);
-                                        // Emitir eventos para o front...
-                                        socket.emit('bet_response', 'Aposta feita com sucesso!');
-                                        socket.emit('round_pot', table.roundPot);
-                                        socket.to(tableId).emit('round_pot', table.roundPot);
-                                        return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } })];
-                                    case 7:
-                                        balance = (_a.sent()).balance;
-                                        player.balance = balance;
-                                        socket.emit('player', player);
-                                        emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
-                                        return [2 /*return*/];
+                                if (!player) {
+                                    return [2 /*return*/];
                                 }
+                                newBet_1.newBet(bet, player, table, socket);
+                                return [2 /*return*/];
                             });
                         }); });
                         socket.on('disconnect', function () { return __awaiter(void 0, void 0, void 0, function () {
-                            var playerIndex, socketIndex, winner, newBalance, balance;
+                            var playerIndex, socketIndex;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
@@ -289,23 +164,11 @@ io.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0,
                                         table.sockets.splice(socketIndex, 1);
                                         socket.leave(tableId);
                                         socket.to(tableId).emit('all_players', getPlayersWithoutCards_1.getPlayersWithoutCards(table.players, player));
-                                        if (!(table.players.length <= 1)) return [3 /*break*/, 2];
-                                        winner = table.players[0];
-                                        if (!winner) {
-                                            return [2 /*return*/];
-                                        }
-                                        newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * 2);
-                                        socket.to(tableId).emit('winner', winner.databaseId);
-                                        table.roundStatus = false;
-                                        return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: winner.databaseId } })];
+                                        return [4 /*yield*/, newBet_1.newBet('fold', player, table, socket, true)];
                                     case 1:
-                                        balance = (_a.sent()).balance;
-                                        winner.balance = balance;
-                                        return [3 /*break*/, 3];
-                                    case 2:
-                                        passTurn_1.passTurn(player, table);
-                                        _a.label = 3;
-                                    case 3: return [2 /*return*/];
+                                        _a.sent();
+                                        passTurn_1.passTurn(player, table, socket);
+                                        return [2 /*return*/];
                                 }
                             });
                         }); });
