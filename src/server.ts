@@ -8,13 +8,10 @@ import { getPlayersWithoutCards } from './util/getPlayersWithoutCards';
 import { passTurn } from './util/passTurn';
 import { getPosition } from './util/getPosition';
 import { startRound } from './util/startRound';
-import { flop } from './util/flop';
-import { turn } from './util/turn';
-import { river } from './util/river';
-import { showdonw } from './util/showdown';
 import { getTables } from './util/getTables';
-import { movePlayersInTable } from './util/movePlayersInTable';
 import { emitAllPlayersForEachSocket } from './util/emitAllPlayersForEachSocket';
+import { decrementTimer } from './util/decrementTimer';
+import { newBet } from './util/newBet';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -106,140 +103,11 @@ io.on('connection', async (socket: Socket) => {
     });
 
     socket.on('new_bet', async (bet: number | 'fold' | 'check' | 'call') => {
-      if (!table.roundStatus) {
-        socket.emit('error_msg', 'Rodada não ainda começou, aguarde...');
-        return;
-      } else if (!player?.isTurn) {
-        socket.emit('error_msg', 'Você não pode apostar ainda...');
-        return;
-      } else if (player?.folded) {
-        socket.emit('error_msg', 'Você já saiu da rodada, espere a próxima');
+      if (!player) {
         return;
       }
 
-      if (bet === 'fold') { // Folded
-        player.folded = true;
-        socket.emit('bet_response', 'Você saiu da rodada.');
-
-        const playersWhoDidNotFold = table.players.filter(player => player.folded === false)
-
-        if (playersWhoDidNotFold.length === 1) {
-          // Finalizar o round.
-          // Único que não foldou...
-          const winner = playersWhoDidNotFold[0];
-          // Fazer alguns ajustes...
-          // Fazer query no banco de dados...
-          const newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * 2);
-          socket.emit('winner', winner.databaseId);
-          socket.to(tableId).emit('winner', winner.databaseId);
-          table.roundStatus = false;
-          const { balance } = await prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: winner.databaseId } });
-          winner.balance = balance
-          socket.emit('player', player);
-          emitAllPlayersForEachSocket(table.sockets, table.players);
-
-          // Iniciar outro round...
-          movePlayersInTable(table);
-          startRound(table, socket, true);
-        } else {
-          passTurn(player, table);
-        }
-        return;
-      }
-
-      if (bet === 'call' || bet === 'check') { // Called
-        const bet = table.totalHighestBet - player.totalBetValue;
-
-        if (player?.balance < bet) {
-          socket.emit('error_msg', 'Seu saldo não é suficiente!');
-          return;
-        };
-
-        const newBalance = player.balance -= bet;
-        table.roundPot += bet;
-        table.totalBets++;
-
-        player.totalBetValue += bet;
-        // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
-        if (player.totalBetValue > table.totalHighestBet) {
-          table.totalHighestBet = player.totalBetValue;
-        }
-
-        if (bet > table.highestBet) {
-          table.highestBet = bet;
-        }
-
-        // Passar o turno para outro jogador...
-        passTurn(player, table);
-
-        // Emitir eventos para o front...
-        socket.emit('bet_response', 'Aposta feita com sucesso!');
-        socket.emit('round_pot', table.roundPot);
-        socket.to(tableId).emit('round_pot', table.roundPot);
-
-        const { balance } = await prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } });
-        player.balance = balance
-        socket.emit('player', player);
-        emitAllPlayersForEachSocket(table.sockets, table.players);
-
-        const playersWhoDidNotFold = table.players.filter(player => player.folded === false);
-        const areBetsEqual = playersWhoDidNotFold.every(player => player.totalBetValue === table.totalHighestBet);
-
-        if (areBetsEqual && table.totalBets >= playersWhoDidNotFold.length) {
-          if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
-            flop(table, socket);
-          } else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
-            turn(table, socket);
-          } else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
-            river(table, socket);
-          }  else if (table.flopStatus && table.turnStatus && table.riverStatus) {
-            showdonw(table, socket);
-          };
-        };
-
-        return;
-      }
-
-      const minBet = (table.highestBet + table.bigBlind);
-      if (bet < minBet) {
-        socket.emit('error_msg', `Valor de aposta mínimo: ${minBet}`);
-        return;
-      } else if (typeof(bet) !== 'number') {
-        socket.emit('error_msg', 'Aposta invalida');
-        return;
-      }
-
-      // Verificação de saldo...
-      if (player.balance < bet) {
-        socket.emit('error_msg', 'Seu saldo não é suficiente!');
-        return;
-      };
-
-      const newBalance = player.balance -= bet;
-      table.roundPot += bet;
-      table.totalBets++;
-
-      player.totalBetValue += bet;
-       // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
-      if (player.totalBetValue > table.totalHighestBet) {
-        table.totalHighestBet = player.totalBetValue;
-      }
-
-      if (bet > table.highestBet) {
-        table.highestBet = bet;
-      }
-
-      // Passar o turno para outro jogador...
-      passTurn(player, table);
-
-      // Emitir eventos para o front...
-      socket.emit('bet_response', 'Aposta feita com sucesso!');
-      socket.emit('round_pot', table.roundPot);
-      socket.to(tableId).emit('round_pot', table.roundPot);
-      const { balance } = await prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } });
-      player.balance = balance
-      socket.emit('player', player);
-      emitAllPlayersForEachSocket(table.sockets, table.players);
+      newBet(bet, player, table, socket);
     })
 
     socket.on('disconnect', async () => {
@@ -247,7 +115,7 @@ io.on('connection', async (socket: Socket) => {
       if (!player) {
         return
       };
-
+      
       const playerIndex = table.players.indexOf(player);
       table.players.splice(playerIndex, 1);
       
@@ -257,20 +125,9 @@ io.on('connection', async (socket: Socket) => {
       socket.leave(tableId);
       socket.to(tableId).emit('all_players', getPlayersWithoutCards(table.players, player));
 
-      if (table.players.length <= 1) {
-        // Finalizar o round.
-        const winner = table.players[0];
-        if (!winner) {
-          return;
-        }
-        const newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * 2);
-        socket.to(tableId).emit('winner', winner.databaseId);
-        table.roundStatus = false;
-        const { balance } = await prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: winner.databaseId } });
-        winner.balance = balance
-      } else {
-        passTurn(player, table);
-      }
+      await newBet('fold', player, table, socket, true);
+
+      passTurn(player, table, socket);
     });
   });
 });

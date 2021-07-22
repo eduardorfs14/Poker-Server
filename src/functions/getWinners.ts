@@ -25,10 +25,10 @@ export function getWinners(players: Player[], tableCards: string[]) {
       };
       const playerHand = getCombination(player.cards, tableCards);
 
-      const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '');
-      const playerHandCardsFormated: string = playerHand.toString().repeat(solvedHands.length).replace(/\s/g, '').replace(/([a-z][A-Z])/g, ',');
+      const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');
+      const playerHandCardsFormated: string = playerHand.toString().repeat(solvedHands.length).replace(/\s/g, '')
 
-      if (solvedHandsFormated === playerHandCardsFormated.replace(/([a-z][0-9])/g, ',')) {
+      if (solvedHandsFormated === playerHandCardsFormated) {
         winners.push(player);
       };
     });
@@ -40,8 +40,8 @@ export function getWinners(players: Player[], tableCards: string[]) {
     };
     const playerHand = getCombination(player.cards, tableCards);
 
-    const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '');
-    const playerHandCardsFormated: string = playerHand.cards.toString().replace(/\s/g, '');
+    const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');;
+    const playerHandCardsFormated: string = playerHand.cards.toString().replace(/\s/g, '').replace(/,/g, '');
 
     if (solvedHandsFormated === playerHandCardsFormated) {
       winners.push(player);

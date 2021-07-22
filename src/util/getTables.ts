@@ -12,6 +12,7 @@ export async function getTables(): Promise<Table[]> {
       ...table,
       highestBet: table.bigBlind,
       totalHighestBet: table.bigBlind,
+      timer: 45,
       totalBets: 0,
       roundPot,
       roundStatus: false,

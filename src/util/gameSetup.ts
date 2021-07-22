@@ -21,6 +21,7 @@ export function gameSetup(players: Player[]) {
     if (index === 8) player.position = 'DEALER';
 
     player.folded = false;
+    player.timer = 45;
   });
 
   if (players.length <= 2) {

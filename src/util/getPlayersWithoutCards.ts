@@ -6,6 +6,7 @@ export function getPlayersWithoutCards(players: Player[], player: Player) {
   const playersWithoutCards = filtredPlayers.map(player => {
     return {
       id: player.id,
+      name: player.name,
       email: player.email,
       balance: player.balance,
       position: player.position,

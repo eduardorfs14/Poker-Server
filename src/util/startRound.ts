@@ -1,10 +1,14 @@
+import { PrismaClient } from '@prisma/client';
 import { Socket } from "socket.io";
 import { Table } from "../interfaces/Table";
+import { decrementTimer } from "./decrementTimer";
 import { emitAllPlayersForEachSocket } from "./emitAllPlayersForEachSocket";
 import { emitCardsForEachSocket } from "./emitCardsForEachSocket";
 import { gameSetup } from "./gameSetup";
 
-export async function startRound(table: Table, socket: Socket, isNewRound: boolean): Promise<void> {
+const prisma = new PrismaClient();
+
+export async function startRound(table: Table, socket: Socket, isNewRound: boolean, justFolded?: boolean): Promise<void> {
   const { deck } = gameSetup(table.players);
 
   if (table.players.length <= 2) {
@@ -15,7 +19,15 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
     if (sb) {
       sb.isTurn = true;
       const socket = table.sockets.find(socket => socket.id === sb.id)
-      socket?.emit('your_turn');
+      if (!socket) {
+        return;
+      }
+      socket.emit('your_turn');
+      socket.emit('player', sb);
+      const interval = decrementTimer(sb, table, socket);
+      if (justFolded) {
+        clearInterval(interval);
+      }
     }
   } else if (table.players.length >= 3) {
     table.players.forEach(player => {
@@ -25,18 +37,30 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
     if (utg1) {
       utg1.isTurn = true;
       const socket = table.sockets.find(socket => socket.id === utg1.id)
-      socket?.emit('your_turn');
+      if (!socket) {
+        return;
+      }
+      socket.emit('your_turn');
+      socket.emit('player', utg1);
+      const interval = decrementTimer(utg1, table, socket);
+      if (justFolded) {
+        clearInterval(interval);
+      }
     }
   }
 
-  table.players.forEach(player => {
+  table.players.forEach(async player => {
     // Adicionar propriedade "isTurn" aos "players"
     if (isNewRound) {
       // Adicionar propriedade "totalBetValue" ao "player"
       if (player.position === 'SB') {
         player.totalBetValue = (table.bigBlind / 2);
+        player.balance -= (table.bigBlind / 2);
+        await prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })
       } else if (player.position === 'BB') {
         player.totalBetValue = table.bigBlind;
+        player.balance -= table.bigBlind;
+        await prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })
       } else {
         player.totalBetValue = 0;
       }
