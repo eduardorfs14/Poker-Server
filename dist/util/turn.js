@@ -6,8 +6,8 @@ var emitCardsForEachSocket_1 = require("./emitCardsForEachSocket");
 function turn(table, socket) {
     var _a = generateTurn_1.generateTurn(table.deck), generatedTurn = _a.generatedTurn, newDeck = _a.newDeck;
     table.players.forEach(function (player) {
-        // Adicionar propriedade "totalBetValue" aos "players"
-        player.totalBetValue = 0;
+        // Adicionar propriedade "totalBetValueOnRound" aos "players"
+        player.totalBetValueOnRound = 0;
     });
     table.deck = newDeck;
     table.turnStatus = true;

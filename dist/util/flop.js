@@ -6,8 +6,8 @@ var emitCardsForEachSocket_1 = require("./emitCardsForEachSocket");
 function flop(table, socket) {
     var _a = generateFlop_1.generateFlop(table.deck), generatedFlop = _a.generatedFlop, newDeck = _a.newDeck;
     table.players.forEach(function (player) {
-        // Adicionar propriedade "totalBetValue" aos "players"
-        player.totalBetValue = 0;
+        // Adicionar propriedade "totalBetValueOnRound" aos "players"
+        player.totalBetValueOnRound = 0;
     });
     table.deck = newDeck;
     table.cards = table.cards.concat(generatedFlop);

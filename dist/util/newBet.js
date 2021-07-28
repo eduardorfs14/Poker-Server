@@ -47,7 +47,8 @@ var turn_1 = require("./turn");
 var prisma = new client_1.PrismaClient();
 function newBet(bet, player, table, socket, leftTable) {
     return __awaiter(this, void 0, void 0, function () {
-        var bet_1, newBalance_1, balance_1, playersWhoDidNotFold, areBetsEqual, minBet, newBalance, balance;
+        var playersWhoDidNotFold, bet_1, newBalance_1, balance_1, playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, areBetsEqual, minBet, newBalance, balance;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -66,7 +67,12 @@ function newBet(bet, player, table, socket, leftTable) {
                     if (bet === 'fold') { // Folded
                         player.folded = true;
                         socket.emit('bet_response', 'Você saiu da rodada.');
+                        playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
                         if (leftTable) {
+                            passTurn_1.passTurn(player, table, socket, false);
+                            return [2 /*return*/];
+                        }
+                        else if (playersWhoDidNotFold.length >= 2) {
                             passTurn_1.passTurn(player, table, socket, false);
                             return [2 /*return*/];
                         }
@@ -74,9 +80,68 @@ function newBet(bet, player, table, socket, leftTable) {
                         return [2 /*return*/];
                     }
                     if (!(bet === 'call' || bet === 'check')) return [3 /*break*/, 2];
-                    bet_1 = table.totalHighestBet - player.totalBetValue;
-                    if ((player === null || player === void 0 ? void 0 : player.balance) < bet_1) {
-                        socket.emit('error_msg', 'Seu saldo não é suficiente!');
+                    bet_1 = table.totalHighestBet - player.totalBetValueOnRound;
+                    if (player.balance < bet_1) {
+                        player.isTurn = false;
+                        prisma.users.findUnique({ where: { id: player.databaseId }, select: { balance: true } }).then(function (user) { return __awaiter(_this, void 0, void 0, function () {
+                            var allInBet, newBalance, balance, playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, areBetsEqual;
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        if (!user) {
+                                            return [2 /*return*/];
+                                        }
+                                        allInBet = user.balance;
+                                        newBalance = player.balance -= allInBet;
+                                        table.roundPot += allInBet;
+                                        table.totalBets++;
+                                        player.totalBetValue += allInBet;
+                                        player.totalBetValueOnRound += allInBet;
+                                        player.allIn = true;
+                                        // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
+                                        if (player.totalBetValueOnRound > table.totalHighestBet) {
+                                            table.totalHighestBet = player.totalBetValueOnRound;
+                                        }
+                                        if (allInBet > table.highestBet) {
+                                            table.highestBet = allInBet;
+                                        }
+                                        // Passar o turno para outro jogador...
+                                        passTurn_1.passTurn(player, table, socket);
+                                        // Emitir eventos para o front...
+                                        socket.emit('bet_response', 'Aposta feita com sucesso!');
+                                        socket.emit('round_pot', table.roundPot);
+                                        socket.to(table.id).emit('round_pot', table.roundPot);
+                                        return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } })];
+                                    case 1:
+                                        balance = (_a.sent()).balance;
+                                        player.balance = balance;
+                                        socket.emit('player', player);
+                                        emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
+                                        playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
+                                        playersWhoDidNotFoldAndAreNotAllIn = playersWhoDidNotFold.filter(function (player) { return player.allIn === false; });
+                                        areBetsEqual = playersWhoDidNotFoldAndAreNotAllIn.every(function (player) { return player.totalBetValueOnRound === table.totalHighestBet; });
+                                        if (areBetsEqual && playersWhoDidNotFoldAndAreNotAllIn.length > 1) {
+                                            if (table.totalBets >= playersWhoDidNotFoldAndAreNotAllIn.length) {
+                                                if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                                                    flop_1.flop(table, socket);
+                                                }
+                                                else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                                                    turn_1.turn(table, socket);
+                                                }
+                                                else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
+                                                    river_1.river(table, socket);
+                                                }
+                                                else if (table.flopStatus && table.turnStatus && table.riverStatus) {
+                                                    showdown_1.showdonw(table, socket);
+                                                }
+                                                ;
+                                            }
+                                        }
+                                        ;
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); });
                         return [2 /*return*/];
                     }
                     ;
@@ -84,9 +149,10 @@ function newBet(bet, player, table, socket, leftTable) {
                     table.roundPot += bet_1;
                     table.totalBets++;
                     player.totalBetValue += bet_1;
+                    player.totalBetValueOnRound += bet_1;
                     // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
-                    if (player.totalBetValue > table.totalHighestBet) {
-                        table.totalHighestBet = player.totalBetValue;
+                    if (player.totalBetValueOnRound > table.totalHighestBet) {
+                        table.totalHighestBet = player.totalBetValueOnRound;
                     }
                     if (bet_1 > table.highestBet) {
                         table.highestBet = bet_1;
@@ -104,19 +170,23 @@ function newBet(bet, player, table, socket, leftTable) {
                     socket.emit('player', player);
                     emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
                     playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
-                    areBetsEqual = playersWhoDidNotFold.every(function (player) { return player.totalBetValue === table.totalHighestBet; });
-                    if (areBetsEqual && table.totalBets >= playersWhoDidNotFold.length) {
-                        if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
-                            flop_1.flop(table, socket);
-                        }
-                        else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
-                            turn_1.turn(table, socket);
-                        }
-                        else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
-                            river_1.river(table, socket);
-                        }
-                        else if (table.flopStatus && table.turnStatus && table.riverStatus) {
-                            showdown_1.showdonw(table, socket);
+                    playersWhoDidNotFoldAndAreNotAllIn = playersWhoDidNotFold.filter(function (player) { return player.allIn === false; });
+                    areBetsEqual = playersWhoDidNotFoldAndAreNotAllIn.every(function (player) { return player.totalBetValueOnRound === table.totalHighestBet; });
+                    if (areBetsEqual) {
+                        if (table.totalBets >= playersWhoDidNotFoldAndAreNotAllIn.length) {
+                            if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                                flop_1.flop(table, socket);
+                            }
+                            else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                                turn_1.turn(table, socket);
+                            }
+                            else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
+                                river_1.river(table, socket);
+                            }
+                            else if (table.flopStatus && table.turnStatus && table.riverStatus) {
+                                showdown_1.showdonw(table, socket);
+                            }
+                            ;
                         }
                         ;
                     }
@@ -139,12 +209,16 @@ function newBet(bet, player, table, socket, leftTable) {
                     }
                     ;
                     newBalance = player.balance -= bet;
+                    if (newBalance === 0) {
+                        player.allIn = true;
+                    }
                     table.roundPot += bet;
                     table.totalBets++;
                     player.totalBetValue += bet;
+                    player.totalBetValueOnRound += bet;
                     // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
-                    if (player.totalBetValue > table.totalHighestBet) {
-                        table.totalHighestBet = player.totalBetValue;
+                    if (player.totalBetValueOnRound > table.totalHighestBet) {
+                        table.totalHighestBet = player.totalBetValueOnRound;
                     }
                     if (bet > table.highestBet) {
                         table.highestBet = bet;

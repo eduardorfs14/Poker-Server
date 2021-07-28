@@ -6,8 +6,8 @@ var emitCardsForEachSocket_1 = require("./emitCardsForEachSocket");
 function river(table, socket) {
     var _a = generateRiver_1.generateRiver(table.deck), generatedRiver = _a.generatedRiver, newDeck = _a.newDeck;
     table.players.forEach(function (player) {
-        // Adicionar propriedade "totalBetValue" aos "players"
-        player.totalBetValue = 0;
+        // Adicionar propriedade "totalBetValueOnRound" aos "players"
+        player.totalBetValueOnRound = 0;
     });
     table.deck = newDeck;
     table.riverStatus = true;

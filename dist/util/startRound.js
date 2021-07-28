@@ -38,6 +38,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startRound = void 0;
 var client_1 = require("@prisma/client");
+var PokerTable_1 = require("../PokerTable/PokerTable");
 var decrementTimer_1 = require("./decrementTimer");
 var emitAllPlayersForEachSocket_1 = require("./emitAllPlayersForEachSocket");
 var emitCardsForEachSocket_1 = require("./emitCardsForEachSocket");
@@ -48,6 +49,29 @@ function startRound(table, socket, isNewRound, justFolded) {
         var deck, sb_1, socket_1, interval, utg1_1, socket_2, interval;
         var _this = this;
         return __generator(this, function (_a) {
+            table.players.forEach(function (player) { return __awaiter(_this, void 0, void 0, function () {
+                var equivalentSocket, pokerTable;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            if (!(player.balance < (table.bigBlind * 5))) return [3 /*break*/, 2];
+                            equivalentSocket = table.sockets.find(function (s) { return s.id === player.id; });
+                            if (!equivalentSocket)
+                                return [2 /*return*/];
+                            pokerTable = new PokerTable_1.PokerTable();
+                            return [4 /*yield*/, pokerTable.leave(table, player, equivalentSocket, true)];
+                        case 1:
+                            _a.sent();
+                            equivalentSocket.emit('error_msg', 'Saldo muito baixo para mesa');
+                            _a.label = 2;
+                        case 2: return [2 /*return*/];
+                    }
+                });
+            }); });
+            // Impedir que rodada comece com 1 ou menos jogadores
+            if (table.players.length <= 1) {
+                return [2 /*return*/];
+            }
             deck = gameSetup_1.gameSetup(table.players).deck;
             if (table.players.length <= 2) {
                 table.players.forEach(function (player) {
@@ -91,9 +115,11 @@ function startRound(table, socket, isNewRound, justFolded) {
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
+                            player.allIn = false;
                             if (!isNewRound) return [3 /*break*/, 6];
                             if (!(player.position === 'SB')) return [3 /*break*/, 2];
                             player.totalBetValue = (table.bigBlind / 2);
+                            player.totalBetValueOnRound = (table.bigBlind / 2);
                             player.balance -= (table.bigBlind / 2);
                             return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })];
                         case 1:
@@ -102,6 +128,7 @@ function startRound(table, socket, isNewRound, justFolded) {
                         case 2:
                             if (!(player.position === 'BB')) return [3 /*break*/, 4];
                             player.totalBetValue = table.bigBlind;
+                            player.totalBetValueOnRound = table.bigBlind;
                             player.balance -= table.bigBlind;
                             return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })];
                         case 3:
@@ -109,11 +136,13 @@ function startRound(table, socket, isNewRound, justFolded) {
                             return [3 /*break*/, 5];
                         case 4:
                             player.totalBetValue = 0;
+                            player.totalBetValueOnRound = 0;
                             _a.label = 5;
                         case 5: return [3 /*break*/, 7];
                         case 6:
                             // Adicionar propriedade "totalBetValue" aos "players"
                             player.totalBetValue = 0;
+                            player.totalBetValueOnRound = 0;
                             _a.label = 7;
                         case 7: return [2 /*return*/];
                     }

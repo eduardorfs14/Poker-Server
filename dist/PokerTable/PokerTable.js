@@ -36,35 +36,30 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.decrementTimer = void 0;
-var newBet_1 = require("./newBet");
-function decrementTimer(player, table, socket) {
-    var _this = this;
-    var timerInterval = setInterval(function () { return __awaiter(_this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    // Garantir que o jogador passado para a funcão tem a vez de jogar
-                    if (!player.isTurn) {
-                        clearInterval(timerInterval);
-                        return [2 /*return*/];
-                    }
-                    if (!(player.timer <= 0)) return [3 /*break*/, 2];
-                    // O Jogador FOLDOU
-                    clearInterval(timerInterval);
-                    player.timer = 45;
-                    return [4 /*yield*/, newBet_1.newBet('fold', player, table, socket)];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/];
-                case 2:
-                    player.timer--;
-                    socket.emit('timer', { name: player.name, timeToPlay: player.timer });
-                    socket.to(table.id).emit('timer', { name: player.name, timeToPlay: player.timer });
-                    return [2 /*return*/];
-            }
+exports.PokerTable = void 0;
+var passTurn_1 = require("../util/passTurn");
+var getPlayersWithoutCards_1 = require("../util/getPlayersWithoutCards");
+var PokerTable = /** @class */ (function () {
+    function PokerTable() {
+    }
+    PokerTable.prototype.leave = function (table, player, socket, isRefresh) {
+        return __awaiter(this, void 0, void 0, function () {
+            var playerIndex, socketIndex;
+            return __generator(this, function (_a) {
+                player.isTurn = false;
+                if (isRefresh) {
+                    playerIndex = table.players.indexOf(player);
+                    table.players.splice(playerIndex, 1);
+                    socketIndex = table.sockets.indexOf(socket);
+                    table.sockets.splice(socketIndex, 1);
+                }
+                socket.to(table.id).emit('all_players', getPlayersWithoutCards_1.getPlayersWithoutCards(table.players, player));
+                socket.emit('player', undefined);
+                passTurn_1.passTurn(player, table, socket);
+                return [2 /*return*/];
+            });
         });
-    }); }, 1000);
-    return timerInterval;
-}
-exports.decrementTimer = decrementTimer;
+    };
+    return PokerTable;
+}());
+exports.PokerTable = PokerTable;

@@ -42,67 +42,104 @@ var decrementTimer_1 = require("./decrementTimer");
 var emitAllPlayersForEachSocket_1 = require("./emitAllPlayersForEachSocket");
 var movePlayersInTable_1 = require("./movePlayersInTable");
 var startRound_1 = require("./startRound");
+var showdown_1 = require("./showdown");
+var flop_1 = require("./flop");
+var turn_1 = require("./turn");
+var river_1 = require("./river");
 var prisma = new client_1.PrismaClient();
 function passTurn(player, table, socket, isFold) {
     return __awaiter(this, void 0, void 0, function () {
-        var playersWhoDidNotFold, winner, newBalance, balance, playerIndex_1, playersWhoDidNotFold_1, nextPlayer, nextPlayerThatDidNotFold_1, socket_1, interval, nextPlayerThatDidNotFold_2, socket_2, interval;
+        var playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, winner, newBalance, balance, playerIndex_1, nextPlayer_1, socket_1, interval, nextPlayerThatDidNotFoldAndIsNotAllIn_1, socket_2, interval;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    player.isTurn = false;
+                    table.players.forEach(function (player) { return player.isTurn = false; });
                     playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
+                    playersWhoDidNotFoldAndAreNotAllIn = playersWhoDidNotFold.filter(function (player) { return player.allIn === false; });
                     if (!(playersWhoDidNotFold.length === 1)) return [3 /*break*/, 2];
                     winner = playersWhoDidNotFold[0];
                     winner.isTurn = false;
                     newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * 2);
+                    socket.emit('round_pot', table.roundPot);
+                    socket.emit('table_cards', table.cards);
                     socket.emit('winner', winner.databaseId);
+                    socket.to(table.id).emit('round_pot', table.roundPot);
+                    socket.to(table.id).emit('table_cards', table.cards);
                     socket.to(table.id).emit('winner', winner.databaseId);
                     table.roundStatus = false;
                     return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: winner.databaseId } })];
                 case 1:
                     balance = (_a.sent()).balance;
                     winner.balance = balance;
-                    socket.emit('player', player);
                     emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
                     if (isFold) {
+                        // Caso o jogador tenha saido da mesa, não emitir o player para ele, assim fazendo com que no front ele não apareca na mesa
+                        socket.emit('player', player);
                         movePlayersInTable_1.movePlayersInTable(table);
                         startRound_1.startRound(table, socket, true);
                     }
                     return [2 /*return*/];
                 case 2:
-                    playerIndex_1 = table.players.indexOf(player);
-                    playersWhoDidNotFold_1 = table.players.filter(function (player) { return player.folded === false; });
-                    nextPlayer = playersWhoDidNotFold_1[playerIndex_1 + 1];
-                    playersWhoDidNotFold_1.forEach(function (player) {
-                        player.timer = 45;
-                    });
-                    if (!nextPlayer) {
-                        nextPlayerThatDidNotFold_1 = table.players.find(function (player) { return player.folded === false; });
-                        if (nextPlayerThatDidNotFold_1) {
-                            nextPlayerThatDidNotFold_1.isTurn = true;
-                            socket_1 = table.sockets.find(function (socket) { return socket.id === nextPlayerThatDidNotFold_1.id; });
+                    if (playersWhoDidNotFoldAndAreNotAllIn.length === 1 && table.totalBets >= playersWhoDidNotFold.length) {
+                        if (playersWhoDidNotFoldAndAreNotAllIn[0].totalBetValue >= table.highestBet || playersWhoDidNotFoldAndAreNotAllIn[0].balance <= 0) {
+                            if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                                setTimeout(function () { return flop_1.flop(table, socket); }, 1000);
+                                setTimeout(function () { return turn_1.turn(table, socket); }, 3000);
+                                setTimeout(function () { return river_1.river(table, socket); }, 6000);
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 11000);
+                                return [2 /*return*/];
+                            }
+                            else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                                setTimeout(function () { return turn_1.turn(table, socket); }, 1000);
+                                setTimeout(function () { return river_1.river(table, socket); }, 3000);
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 8000);
+                                return [2 /*return*/];
+                            }
+                            else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
+                                setTimeout(function () { return river_1.river(table, socket); }, 1000);
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 5000);
+                                return [2 /*return*/];
+                            }
+                            else if (table.flopStatus && table.turnStatus && table.riverStatus) {
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 2000);
+                                return [2 /*return*/];
+                            }
+                            ;
+                            return [2 /*return*/];
+                        }
+                        return [2 /*return*/];
+                    }
+                    else {
+                        playerIndex_1 = table.players.indexOf(player);
+                        nextPlayer_1 = table.players.find(function (player, index) { return player.folded === false && playerIndex_1 < index; });
+                        table.players.forEach(function (player) {
+                            player.timer = 45;
+                        });
+                        if (nextPlayer_1) {
+                            nextPlayer_1.isTurn = true;
+                            socket_1 = table.sockets.find(function (socket) { return socket.id === nextPlayer_1.id; });
                             if (!socket_1) {
                                 return [2 /*return*/];
                             }
                             socket_1.emit('your_turn');
-                            interval = decrementTimer_1.decrementTimer(nextPlayerThatDidNotFold_1, table, socket_1);
+                            interval = decrementTimer_1.decrementTimer(nextPlayer_1, table, socket_1);
                             if (isFold) {
                                 clearInterval(interval);
                             }
                         }
-                    }
-                    else {
-                        nextPlayerThatDidNotFold_2 = table.players.find(function (player, index) { return player.folded === false && playerIndex_1 < index; });
-                        if (nextPlayerThatDidNotFold_2) {
-                            nextPlayerThatDidNotFold_2.isTurn = true;
-                            socket_2 = table.sockets.find(function (socket) { return socket.id === nextPlayerThatDidNotFold_2.id; });
-                            if (!socket_2) {
-                                return [2 /*return*/];
-                            }
-                            socket_2.emit('your_turn');
-                            interval = decrementTimer_1.decrementTimer(nextPlayerThatDidNotFold_2, table, socket_2);
-                            if (isFold) {
-                                clearInterval(interval);
+                        else {
+                            nextPlayerThatDidNotFoldAndIsNotAllIn_1 = table.players.find(function (player) { return player.folded === false; });
+                            if (nextPlayerThatDidNotFoldAndIsNotAllIn_1) {
+                                nextPlayerThatDidNotFoldAndIsNotAllIn_1.isTurn = true;
+                                socket_2 = table.sockets.find(function (socket) { return socket.id === nextPlayerThatDidNotFoldAndIsNotAllIn_1.id; });
+                                if (!socket_2) {
+                                    return [2 /*return*/];
+                                }
+                                socket_2.emit('your_turn');
+                                interval = decrementTimer_1.decrementTimer(nextPlayerThatDidNotFoldAndIsNotAllIn_1, table, socket_2);
+                                if (isFold) {
+                                    clearInterval(interval);
+                                }
                             }
                         }
                     }
