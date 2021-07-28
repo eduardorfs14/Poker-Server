@@ -6,8 +6,8 @@ import { emitCardsForEachSocket } from "./emitCardsForEachSocket";
 export function turn(table: Table, socket: Socket) {
   const { generatedTurn, newDeck } = generateTurn(table.deck);
   table.players.forEach(player => {
-    // Adicionar propriedade "totalBetValue" aos "players"
-    player.totalBetValue = 0;
+    // Adicionar propriedade "totalBetValueOnRound" aos "players"
+    player.totalBetValueOnRound = 0;
   });
   table.deck = newDeck;
   table.turnStatus = true;

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Socket } from "socket.io";
 import { Table } from "../interfaces/Table";
+import { PokerTable } from '../PokerTable/PokerTable';
 import { decrementTimer } from "./decrementTimer";
 import { emitAllPlayersForEachSocket } from "./emitAllPlayersForEachSocket";
 import { emitCardsForEachSocket } from "./emitCardsForEachSocket";
@@ -9,6 +10,22 @@ import { gameSetup } from "./gameSetup";
 const prisma = new PrismaClient();
 
 export async function startRound(table: Table, socket: Socket, isNewRound: boolean, justFolded?: boolean): Promise<void> {
+  table.players.forEach(async player => {
+    if (player.balance < (table.bigBlind * 5)) {
+      const equivalentSocket = table.sockets.find(s => s.id === player.id);
+      if (!equivalentSocket) return;
+      
+      const pokerTable = new PokerTable();
+      await pokerTable.leave(table, player, equivalentSocket, true);
+      equivalentSocket.emit('error_msg', 'Saldo muito baixo para mesa');
+    }
+  });
+
+  // Impedir que rodada comece com 1 ou menos jogadores
+  if (table.players.length <= 1) {
+    return;
+  }
+  
   const { deck } = gameSetup(table.players);
 
   if (table.players.length <= 2) {
@@ -50,23 +67,28 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
   }
 
   table.players.forEach(async player => {
+    player.allIn = false;
     // Adicionar propriedade "isTurn" aos "players"
     if (isNewRound) {
-      // Adicionar propriedade "totalBetValue" ao "player"
+      // Adicionar propriedade "totalBetValueOnRound e totalBetValue" ao "player"
       if (player.position === 'SB') {
         player.totalBetValue = (table.bigBlind / 2);
+        player.totalBetValueOnRound = (table.bigBlind / 2);
         player.balance -= (table.bigBlind / 2);
         await prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })
       } else if (player.position === 'BB') {
         player.totalBetValue = table.bigBlind;
+        player.totalBetValueOnRound = table.bigBlind;
         player.balance -= table.bigBlind;
         await prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })
       } else {
         player.totalBetValue = 0;
+        player.totalBetValueOnRound = 0;
       }
     } else {
       // Adicionar propriedade "totalBetValue" aos "players"
       player.totalBetValue = 0;
+      player.totalBetValueOnRound = 0;
     }
   });
 

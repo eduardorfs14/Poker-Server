@@ -6,8 +6,8 @@ import { emitCardsForEachSocket } from "./emitCardsForEachSocket";
 export function flop(table: Table, socket: Socket) {
   const { generatedFlop, newDeck } = generateFlop(table.deck);
   table.players.forEach(player => {
-    // Adicionar propriedade "totalBetValue" aos "players"
-    player.totalBetValue = 0;
+    // Adicionar propriedade "totalBetValueOnRound" aos "players"
+    player.totalBetValueOnRound = 0;
   });
   table.deck = newDeck;
   table.cards = table.cards.concat(generatedFlop);

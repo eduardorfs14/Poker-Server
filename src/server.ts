@@ -12,6 +12,7 @@ import { getTables } from './util/getTables';
 import { emitAllPlayersForEachSocket } from './util/emitAllPlayersForEachSocket';
 import { decrementTimer } from './util/decrementTimer';
 import { newBet } from './util/newBet';
+import { PokerTable } from './PokerTable/PokerTable';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -72,12 +73,21 @@ io.on('connection', async (socket: Socket) => {
 
       // Adicionar propriedades ao player já verificadas
       player.balance = databasePlayer.balance;
+
+      if (player.balance <= (table.bigBlind * 5)) {
+        const pokerTable = new PokerTable();
+        pokerTable.leave(table, player, socket);
+        socket.emit('error_msg', 'Saldo insuficiente para entrar na mesa');
+        return
+      }
+
       player.avatarURL = databasePlayer.avatar_url;
       player.email = databasePlayer.email;
       player.databaseId = databasePlayer.id;
 
       player.id = socket.id;
       player.folded = false;
+      player.allIn = false;
       player.position = getPosition(table.players);
 
       table.players.push(player);
@@ -111,23 +121,14 @@ io.on('connection', async (socket: Socket) => {
     })
 
     socket.on('disconnect', async () => {
-      console.log(`[IO] ${socket.id} is disconnected`)
+      console.log(`[IO] ${socket.id} is disconnected`);
+
       if (!player) {
-        return
-      };
-      
-      const playerIndex = table.players.indexOf(player);
-      table.players.splice(playerIndex, 1);
-      
-      const socketIndex = table.sockets.indexOf(socket);
-      table.sockets.splice(socketIndex, 1);
-      
-      socket.leave(tableId);
-      socket.to(tableId).emit('all_players', getPlayersWithoutCards(table.players, player));
+        return;
+      }
 
-      await newBet('fold', player, table, socket, true);
-
-      passTurn(player, table, socket);
+      const pokerTable = new PokerTable();
+      pokerTable.leave(table, player, socket, true);
     });
   });
 });

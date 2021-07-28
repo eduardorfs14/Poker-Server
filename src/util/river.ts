@@ -6,8 +6,8 @@ import { emitCardsForEachSocket } from "./emitCardsForEachSocket";
 export function river(table: Table, socket: Socket ) {
   const { generatedRiver, newDeck } = generateRiver(table.deck);
   table.players.forEach(player => {
-    // Adicionar propriedade "totalBetValue" aos "players"
-    player.totalBetValue = 0;
+    // Adicionar propriedade "totalBetValueOnRound" aos "players"
+    player.totalBetValueOnRound = 0;
   });
   table.deck = newDeck;
   table.riverStatus = true;

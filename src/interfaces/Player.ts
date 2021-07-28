@@ -6,8 +6,10 @@ export interface Player {
   balance: number;
   avatarURL: string | null;
   totalBetValue: number;
+  totalBetValueOnRound: number;
   folded: boolean;
   isTurn: boolean;
+  allIn: boolean;
   timer: number;
   position?: string;
   cards?: string[];
