@@ -4,15 +4,14 @@ import socketio, { Socket } from 'socket.io';
 
 import { Player } from './interfaces/Player';
 import { PrismaClient } from '@prisma/client';
-import { getPlayersWithoutCards } from './util/getPlayersWithoutCards';
 import { passTurn } from './util/passTurn';
 import { getPosition } from './util/getPosition';
 import { startRound } from './util/startRound';
 import { getTables } from './util/getTables';
 import { emitAllPlayersForEachSocket } from './util/emitAllPlayersForEachSocket';
-import { decrementTimer } from './util/decrementTimer';
 import { newBet } from './util/newBet';
 import { PokerTable } from './PokerTable/PokerTable';
+import { emitCardsForEachSocket } from './util/emitCardsForEachSocket';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -81,7 +80,6 @@ io.on('connection', async (socket: Socket) => {
         return
       }
 
-      player.avatarURL = databasePlayer.avatar_url;
       player.email = databasePlayer.email;
       player.databaseId = databasePlayer.id;
 
@@ -118,7 +116,18 @@ io.on('connection', async (socket: Socket) => {
       }
 
       newBet(bet, player, table, socket);
-    })
+    });
+
+    // Quando o jogador adiciona saldo
+    socket.on('add_balance', async () => {
+      if (!player) return;
+      const res = await prisma.users.findUnique({ select: { balance: true }, where: { id: player.id } });
+      if (!res) return;
+      player.balance = res.balance;
+      console.log(player.balance);
+      emitAllPlayersForEachSocket(table.sockets, table.players);
+      emitCardsForEachSocket(table.sockets, table.players, table.cards);
+    });
 
     socket.on('disconnect', async () => {
       console.log(`[IO] ${socket.id} is disconnected`);

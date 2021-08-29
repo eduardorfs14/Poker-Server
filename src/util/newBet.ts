@@ -4,6 +4,7 @@ import { Player } from "../interfaces/Player";
 import { Table } from "../interfaces/Table";
 import { PokerTable } from '../PokerTable/PokerTable';
 import { emitAllPlayersForEachSocket } from './emitAllPlayersForEachSocket';
+import { emitCardsForEachSocket } from './emitCardsForEachSocket';
 import { flop } from './flop';
 import { passTurn } from './passTurn';
 import { river } from './river';
@@ -37,19 +38,20 @@ export async function newBet(
       const playersWhoDidNotFold = table.players.filter(player => player.folded === false);
 
       if (leftTable) {
-        passTurn(player, table, socket, false);
+        await passTurn(player, table, socket, false);
         return;
       } else if (playersWhoDidNotFold.length >= 2) {
-        passTurn(player, table, socket, false);
+        await passTurn(player, table, socket, false);
         return;
       }
 
-      passTurn(player, table, socket, true);
+      await passTurn(player, table, socket, true);
       return;
     }
 
     if (bet === 'call' || bet === 'check') { // Called
       const bet = table.totalHighestBet - player.totalBetValueOnRound;
+      const minBet = (table.highestBet + table.bigBlind);
 
       if (player.balance < bet) {
         player.isTurn = false;
@@ -77,12 +79,12 @@ export async function newBet(
           }
 
           // Passar o turno para outro jogador...
-          passTurn(player, table, socket);
+          await passTurn(player, table, socket);
 
           // Emitir eventos para o front...
           socket.emit('bet_response', 'Aposta feita com sucesso!');
-          socket.emit('round_pot', table.roundPot);
-          socket.to(table.id).emit('round_pot', table.roundPot);
+          socket.emit('min_bet', minBet);
+          socket.to(table.id).emit('min_bet', minBet);
 
           const { balance } = await prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } });
           player.balance = balance;
@@ -130,12 +132,12 @@ export async function newBet(
       }
 
       // Passar o turno para outro jogador...
-      passTurn(player, table, socket);
+      await passTurn(player, table, socket);
 
       // Emitir eventos para o front...
       socket.emit('bet_response', 'Aposta feita com sucesso!');
-      socket.emit('round_pot', table.roundPot);
-      socket.to(table.id).emit('round_pot', table.roundPot);
+      socket.emit('min_bet', minBet);
+      socket.to(table.id).emit('min_bet', minBet);
 
       const { balance } = await prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } });
       player.balance = balance
@@ -145,7 +147,6 @@ export async function newBet(
       const playersWhoDidNotFold = table.players.filter(player => player.folded === false);
       const playersWhoDidNotFoldAndAreNotAllIn = playersWhoDidNotFold.filter(player => player.allIn === false);
       const areBetsEqual = playersWhoDidNotFoldAndAreNotAllIn.every(player => player.totalBetValueOnRound === table.totalHighestBet);
-
 
       if (areBetsEqual) {
         if (table.totalBets >= playersWhoDidNotFoldAndAreNotAllIn.length) {
@@ -188,7 +189,7 @@ export async function newBet(
     table.totalBets++;
 
     player.totalBetValue += bet;
-    player.totalBetValueOnRound += bet
+    player.totalBetValueOnRound += bet;
     // Aumentar a maior bet do round caso a bet total do usuário seja maior que a maior bet do round...
     if (player.totalBetValueOnRound > table.totalHighestBet) {
       table.totalHighestBet = player.totalBetValueOnRound;
@@ -199,14 +200,16 @@ export async function newBet(
     }
 
     // Passar o turno para outro jogador...
-    passTurn(player, table, socket);
+    await passTurn(player, table, socket);
 
     // Emitir eventos para o front...
+    const newMinBet = (table.highestBet + table.bigBlind);
+    
     socket.emit('bet_response', 'Aposta feita com sucesso!');
-    socket.emit('round_pot', table.roundPot);
-    socket.to(table.id).emit('round_pot', table.roundPot);
-    const { balance } = await prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } });
-    player.balance = balance
-    socket.emit('player', player);
+    socket.emit('min_bet', newMinBet);
+    socket.to(table.id).emit('min_bet', newMinBet);
+    const { balance } = await prisma.users.update({ data: { balance: Math.floor(newBalance) }, where: { id: player.databaseId } });
+    player.balance = balance;
+    emitCardsForEachSocket(table.sockets, table.players, table.cards);
     emitAllPlayersForEachSocket(table.sockets, table.players);
 }

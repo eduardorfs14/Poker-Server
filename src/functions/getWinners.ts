@@ -18,20 +18,9 @@ export function getWinners(players: Player[], tableCards: string[]) {
   const solvedHands: Array<any> = Hand.winners(hands);
 
   if (solvedHands.length > 1) {
-    // Empate...
-    players.forEach(player => {
-      if (!player.cards) {
-        throw new Error('Player does not have cards');
-      };
-      const playerHand = getCombination(player.cards, tableCards);
-
-      const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');
-      const playerHandCardsFormated: string = playerHand.toString().repeat(solvedHands.length).replace(/\s/g, '')
-
-      if (solvedHandsFormated === playerHandCardsFormated) {
-        winners.push(player);
-      };
-    });
+    for (let i = 0; i < solvedHands.length; i++) {
+      winners.push(players[i]);
+    }
   };
 
   players.forEach(player => {
@@ -40,7 +29,7 @@ export function getWinners(players: Player[], tableCards: string[]) {
     };
     const playerHand = getCombination(player.cards, tableCards);
 
-    const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');;
+    const solvedHandsFormated: string = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');
     const playerHandCardsFormated: string = playerHand.cards.toString().replace(/\s/g, '').replace(/,/g, '');
 
     if (solvedHandsFormated === playerHandCardsFormated) {

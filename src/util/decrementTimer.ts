@@ -10,7 +10,7 @@ export function decrementTimer(
   ): NodeJS.Timeout {
     const timerInterval = setInterval(async () => {
       // Garantir que o jogador passado para a funcão tem a vez de jogar
-      if (!player.isTurn) {
+      if (!player.isTurn || !table.roundPot) {
         clearInterval(timerInterval);
         return;
       }
@@ -24,9 +24,10 @@ export function decrementTimer(
       }
 
       player.timer--;
+
       socket.emit('timer', { name: player.name, timeToPlay: player.timer })
       socket.to(table.id).emit('timer', { name: player.name, timeToPlay: player.timer })
-  }, 1000)
+  }, 1000);
 
   return timerInterval;
 }

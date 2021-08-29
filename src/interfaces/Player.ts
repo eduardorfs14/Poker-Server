@@ -4,7 +4,7 @@ export interface Player {
   name: string;
   email: string;
   balance: number;
-  avatarURL: string | null;
+  avatar_url: string | null;
   totalBetValue: number;
   totalBetValueOnRound: number;
   folded: boolean;

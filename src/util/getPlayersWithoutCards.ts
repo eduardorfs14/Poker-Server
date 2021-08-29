@@ -9,9 +9,10 @@ export function getPlayersWithoutCards(players: Player[], player: Player) {
       name: player.name,
       email: player.email,
       balance: player.balance,
+      totalBetValueOnRound: player.totalBetValueOnRound,
       position: player.position,
       folded: player.folded,
-      avatarURL: player.avatarURL,
+      avatar_url: player.avatar_url,
     }
   });
 

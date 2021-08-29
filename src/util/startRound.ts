@@ -9,16 +9,21 @@ import { gameSetup } from "./gameSetup";
 
 const prisma = new PrismaClient();
 
-export async function startRound(table: Table, socket: Socket, isNewRound: boolean, justFolded?: boolean): Promise<void> {
-  table.players.forEach(async player => {
-    if (player.balance < (table.bigBlind * 5)) {
-      const equivalentSocket = table.sockets.find(s => s.id === player.id);
-      if (!equivalentSocket) return;
-      
-      const pokerTable = new PokerTable();
-      await pokerTable.leave(table, player, equivalentSocket, true);
-      equivalentSocket.emit('error_msg', 'Saldo muito baixo para mesa');
-    }
+export async function startRound(table: Table, socket: Socket, isNewRound: boolean, justFolded?: boolean): Promise<void> { 
+  /* Gambiarra para expulsar vários jogadores caso necessário (apenas 1 forEach não estava funcionando) */
+  table.players.forEach(() => {
+    table.players.forEach(async player => {
+    
+      if (player.balance < (table.bigBlind * 5)) {
+        // Jogadores não estão sendo expulsos da rodada corretamente
+        const equivalentSocket = table.sockets.find(s => s.id === player.id);
+        if (!equivalentSocket) return;
+        
+        const pokerTable = new PokerTable();
+        await pokerTable.leave(table, player, equivalentSocket, true);
+        equivalentSocket.emit('error_msg', 'Saldo muito baixo para mesa');
+      }
+    });
   });
 
   // Impedir que rodada comece com 1 ou menos jogadores
@@ -35,7 +40,7 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
     const sb = table.players.find(player => player.position === 'SB');
     if (sb) {
       sb.isTurn = true;
-      const socket = table.sockets.find(socket => socket.id === sb.id)
+      const socket = table.sockets.find(socket => socket.id === sb.id);
       if (!socket) {
         return;
       }
@@ -75,12 +80,12 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
         player.totalBetValue = (table.bigBlind / 2);
         player.totalBetValueOnRound = (table.bigBlind / 2);
         player.balance -= (table.bigBlind / 2);
-        await prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })
+        await prisma.users.update({ data: { balance: Math.floor(player.balance) }, where: { id: player.databaseId } })
       } else if (player.position === 'BB') {
         player.totalBetValue = table.bigBlind;
         player.totalBetValueOnRound = table.bigBlind;
         player.balance -= table.bigBlind;
-        await prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })
+        await prisma.users.update({ data: { balance: Math.floor(player.balance) }, where: { id: player.databaseId } })
       } else {
         player.totalBetValue = 0;
         player.totalBetValueOnRound = 0;
@@ -92,6 +97,7 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
     }
   });
 
+  const minBet = (table.highestBet + table.bigBlind);
   table.roundStatus = true;
   isNewRound ? table.highestBet = (table.bigBlind) : table.highestBet = 0;
   isNewRound ? table.totalHighestBet = (table.bigBlind) : table.totalHighestBet = 0;
@@ -104,8 +110,10 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
   table.riverStatus = false;
   socket.emit('round_pot', table.roundPot);
   socket.emit('table_cards', table.cards);
+  socket.emit('min_bet', minBet);
   socket.to(table.id).emit('round_pot', table.roundPot);
   socket.to(table.id).emit('table_cards', table.cards);
+  socket.to(table.id).emit('min_bet', minBet);
   emitCardsForEachSocket(table.sockets, table.players);
   emitAllPlayersForEachSocket(table.sockets, table.players);
 }
