@@ -44,90 +44,227 @@ var startRound_1 = require("./startRound");
 var prisma = new client_1.PrismaClient();
 function showdonw(table, socket) {
     return __awaiter(this, void 0, void 0, function () {
-        var playersThatDidNotFold, isSomeoneAllIn, winners, pot, winner, winnerIndex, maxWin, newBalance, potForEachWinner;
+        var oldBalances, playersThatDidNotFold, playersInTable, winners, pot, i, winner, winnerIndex, newWinners, i_1, winner_1, maxWin, newBalance, newBalance, i, winner, maxWin, newBalance, newBalance, roundResultInfo_1, roundResultInfo;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    playersThatDidNotFold = table.players.filter(function (player) { return player.folded === false; });
-                    isSomeoneAllIn = playersThatDidNotFold.some(function (player) { return player.allIn === true; });
-                    winners = getWinners_1.getWinners(playersThatDidNotFold, table.cards);
-                    if (!isSomeoneAllIn) return [3 /*break*/, 10];
-                    pot = table.roundPot;
-                    _a.label = 1;
-                case 1:
-                    if (!(playersThatDidNotFold.length >= 1)) return [3 /*break*/, 8];
-                    if (!(winners.length === 1)) return [3 /*break*/, 6];
-                    winner = winners[0];
-                    if (!(winner.allIn === true)) return [3 /*break*/, 3];
-                    winnerIndex = playersThatDidNotFold.indexOf(winner);
-                    playersThatDidNotFold.splice(winnerIndex, 1);
-                    maxWin = (winner.totalBetValue * playersThatDidNotFold.length) - (((winner.totalBetValue * playersThatDidNotFold.length) / 100) * 2);
-                    winner.balance = parseInt(maxWin.toFixed(0));
-                    socket.emit('winner', winner.databaseId);
-                    socket.to(table.id).emit('winner', winner.databaseId);
-                    // table.roundStatus = false;
-                    pot -= maxWin;
-                    winners = getWinners_1.getWinners(playersThatDidNotFold, table.cards);
-                    return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(winner.balance.toFixed(0)) }, where: { id: winner.databaseId } })];
-                case 2:
-                    _a.sent();
-                    return [3 /*break*/, 5];
-                case 3:
-                    playersThatDidNotFold.splice(0, playersThatDidNotFold.length);
-                    newBalance = (winner.balance + pot) - ((pot / 100) * 2);
-                    winner.balance = parseInt(newBalance.toFixed(0));
-                    socket.emit('winner', winner.databaseId);
-                    socket.to(table.id).emit('winner', winner.databaseId);
-                    table.roundStatus = false;
-                    // Iniciar outro round...
-                    // movePlayersInTable(table);
-                    // await startRound(table, socket, true);
-                    return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(winner.balance.toFixed(0)) }, where: { id: winner.databaseId } })];
-                case 4:
-                    // Iniciar outro round...
-                    // movePlayersInTable(table);
-                    // await startRound(table, socket, true);
-                    _a.sent();
-                    _a.label = 5;
-                case 5: return [3 /*break*/, 7];
-                case 6:
-                    console.log('2 winners');
-                    _a.label = 7;
-                case 7: return [3 /*break*/, 1];
-                case 8:
-                    // Iniciar outro round...
-                    movePlayersInTable_1.movePlayersInTable(table);
-                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
-                case 9:
-                    _a.sent();
-                    _a.label = 10;
-                case 10:
-                    ;
-                    potForEachWinner = table.roundPot / (winners.length);
-                    winners.forEach(function (winner) {
-                        var newBalance = (winner.balance + potForEachWinner) - ((potForEachWinner / 100) * 2);
-                        winner.balance = parseInt(newBalance.toFixed(0));
-                        socket.emit('winner', winner.databaseId);
-                        socket.to(table.id).emit('winner', winner.databaseId);
+                    oldBalances = table.players.map(function (player) {
+                        return {
+                            id: player.id,
+                            balance: player.balance,
+                        };
                     });
-                    table.roundStatus = false;
-                    // Iniciar outro round...
-                    movePlayersInTable_1.movePlayersInTable(table);
-                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
-                case 11:
-                    _a.sent();
+                    playersThatDidNotFold = table.players.filter(function (player) { return player.folded === false; });
+                    playersInTable = table.players.filter(function (player) { return player.folded === false; });
+                    winners = getWinners_1.getWinners(playersThatDidNotFold, table.cards);
+                    pot = table.roundPot;
+                    if (!(winners.length > 1)) return [3 /*break*/, 2];
+                    // Ocorreu um empate
                     winners.forEach(function (winner) { return __awaiter(_this, void 0, void 0, function () {
+                        var amountThatShouldReturnToWinnerInPercentage, newBalance;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
-                                case 0: return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(winner.balance.toFixed(0)) }, where: { id: winner.databaseId } })];
+                                case 0:
+                                    amountThatShouldReturnToWinnerInPercentage = (winner.totalBetValue / table.roundPot) * 100;
+                                    newBalance = winner.balance + ((table.roundPot / 100) * amountThatShouldReturnToWinnerInPercentage);
+                                    winner.balance = Math.floor(newBalance);
+                                    return [4 /*yield*/, prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } })];
                                 case 1:
                                     _a.sent();
                                     return [2 /*return*/];
                             }
                         });
                     }); });
+                    // Acabar o round.
+                    table.roundStatus = false;
+                    // Iniciar outro round.
+                    movePlayersInTable_1.movePlayersInTable(table);
+                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
+                case 1:
+                    _a.sent();
                     return [2 /*return*/];
+                case 2:
+                    if (!(winners.length === 1)) return [3 /*break*/, 26];
+                    i = 0;
+                    _a.label = 3;
+                case 3:
+                    if (!(i < playersThatDidNotFold.length)) return [3 /*break*/, 14];
+                    winner = winners[i];
+                    if (winner.allIn === false) {
+                        i = playersThatDidNotFold.length;
+                    }
+                    ;
+                    winnerIndex = playersInTable.indexOf(winner);
+                    playersInTable.splice(winnerIndex, 1);
+                    newWinners = getWinners_1.getWinners(playersInTable, table.cards);
+                    if (!(newWinners.length > 1)) return [3 /*break*/, 12];
+                    i_1 = 0;
+                    _a.label = 4;
+                case 4:
+                    if (!(i_1 < winners.length)) return [3 /*break*/, 10];
+                    winner_1 = winners[i_1];
+                    if (!(winner_1.allIn === true)) return [3 /*break*/, 6];
+                    maxWin = (winner_1.totalBetValue * playersThatDidNotFold.length) - (((winner_1.totalBetValue * playersThatDidNotFold.length) / 100) * table.houseSlice);
+                    newBalance = (winner_1.balance + pot) - ((pot / 100) * table.houseSlice);
+                    if (maxWin < newBalance) {
+                        winner_1.balance = Math.floor(maxWin);
+                        pot -= maxWin;
+                    }
+                    else {
+                        winner_1.balance = Math.floor(newBalance);
+                        pot -= newBalance;
+                    }
+                    return [4 /*yield*/, prisma.users.update({ data: { balance: winner_1.balance }, where: { id: winner_1.databaseId } })];
+                case 5:
+                    _a.sent();
+                    return [3 /*break*/, 9];
+                case 6:
+                    newBalance = (winner_1.balance + pot) - ((pot / 100) * table.houseSlice);
+                    winner_1.balance = Math.floor(newBalance);
+                    pot -= pot;
+                    table.roundStatus = false;
+                    // Iniciar outro round...
+                    movePlayersInTable_1.movePlayersInTable(table);
+                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
+                case 7:
+                    _a.sent();
+                    return [4 /*yield*/, prisma.users.update({ data: { balance: winner_1.balance }, where: { id: winner_1.databaseId } })];
+                case 8:
+                    _a.sent();
+                    return [2 /*return*/];
+                case 9:
+                    i_1++;
+                    return [3 /*break*/, 4];
+                case 10:
+                    newWinners.forEach(function (winner) { return __awaiter(_this, void 0, void 0, function () {
+                        var amountThatShouldReturnToWinnerInPercentage, newBalance;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    amountThatShouldReturnToWinnerInPercentage = (winner.totalBetValue / table.roundPot) * 100;
+                                    newBalance = winner.balance + ((pot / 100) * amountThatShouldReturnToWinnerInPercentage);
+                                    winner.balance = Math.floor(newBalance);
+                                    return [4 /*yield*/, prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } })];
+                                case 1:
+                                    _a.sent();
+                                    return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // Acabar o round.
+                    table.roundStatus = false;
+                    // Iniciar outro round.
+                    movePlayersInTable_1.movePlayersInTable(table);
+                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
+                case 11:
+                    _a.sent();
+                    i = playersThatDidNotFold.length;
+                    return [2 /*return*/];
+                case 12:
+                    winners.push(newWinners[0]);
+                    _a.label = 13;
+                case 13:
+                    i++;
+                    return [3 /*break*/, 3];
+                case 14:
+                    i = 0;
+                    _a.label = 15;
+                case 15:
+                    if (!(i < winners.length)) return [3 /*break*/, 24];
+                    winner = winners[i];
+                    if (!(pot <= 0)) return [3 /*break*/, 17];
+                    table.roundStatus = false;
+                    // Iniciar outro round...
+                    movePlayersInTable_1.movePlayersInTable(table);
+                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
+                case 16:
+                    _a.sent();
+                    return [2 /*return*/];
+                case 17:
+                    if (!table.roundStatus) {
+                        return [2 /*return*/];
+                    }
+                    if (!(winner.allIn === true)) return [3 /*break*/, 19];
+                    maxWin = (winner.totalBetValue * playersThatDidNotFold.length) - (((winner.totalBetValue * playersThatDidNotFold.length) / 100) * table.houseSlice);
+                    newBalance = (winner.balance + pot) - ((pot / 100) * table.houseSlice);
+                    if (maxWin < newBalance) {
+                        winner.balance = Math.floor(maxWin);
+                        pot -= maxWin;
+                    }
+                    else {
+                        winner.balance = Math.floor(newBalance);
+                        pot -= newBalance;
+                    }
+                    return [4 /*yield*/, prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } })];
+                case 18:
+                    _a.sent();
+                    return [3 /*break*/, 22];
+                case 19:
+                    newBalance = (winner.balance + pot) - ((pot / 100) * table.houseSlice);
+                    winner.balance = Math.floor(newBalance);
+                    table.roundStatus = false;
+                    roundResultInfo_1 = table.players.map(function (player) {
+                        var oldBalance = oldBalances.find(function (balance) { return balance.id === player.id; });
+                        if (!oldBalance)
+                            return;
+                        var profit = ((player.balance - (oldBalance === null || oldBalance === void 0 ? void 0 : oldBalance.balance)) - player.totalBetValue);
+                        return {
+                            id: player.databaseId,
+                            name: player.name,
+                            avatar_url: player.avatar_url,
+                            totalBetValue: player.totalBetValue,
+                            folded: player.folded,
+                            cards: player.cards,
+                            profit: profit,
+                        };
+                    });
+                    socket.emit('round_result', roundResultInfo_1);
+                    socket.to(table.id).emit('round_result', roundResultInfo_1);
+                    // Garantir que o pot seja 0, para que caso o loop não funcione por algum motivo não pague ninguém a mais.
+                    pot -= pot;
+                    // Iniciar outro round...
+                    movePlayersInTable_1.movePlayersInTable(table);
+                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
+                case 20:
+                    _a.sent();
+                    return [4 /*yield*/, prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } })];
+                case 21:
+                    _a.sent();
+                    return [2 /*return*/];
+                case 22:
+                    ;
+                    _a.label = 23;
+                case 23:
+                    i++;
+                    return [3 /*break*/, 15];
+                case 24:
+                    ;
+                    table.roundStatus = false;
+                    roundResultInfo = table.players.map(function (player) {
+                        var oldBalance = oldBalances.find(function (balance) { return balance.id === player.id; });
+                        if (!oldBalance)
+                            return;
+                        var profit = ((player.balance - (oldBalance === null || oldBalance === void 0 ? void 0 : oldBalance.balance)) - player.totalBetValue);
+                        return {
+                            id: player.databaseId,
+                            name: player.name,
+                            avatar_url: player.avatar_url,
+                            totalBetValue: player.totalBetValue,
+                            folded: player.folded,
+                            cards: player.cards,
+                            profit: profit,
+                        };
+                    });
+                    socket.emit('round_result', roundResultInfo);
+                    socket.to(table.id).emit('round_result', roundResultInfo);
+                    // Iniciar outro round...
+                    movePlayersInTable_1.movePlayersInTable(table);
+                    return [4 /*yield*/, startRound_1.startRound(table, socket, true)];
+                case 25:
+                    _a.sent();
+                    _a.label = 26;
+                case 26: return [2 /*return*/];
             }
         });
     });

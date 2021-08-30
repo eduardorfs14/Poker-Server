@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.newBet = void 0;
 var client_1 = require("@prisma/client");
 var emitAllPlayersForEachSocket_1 = require("./emitAllPlayersForEachSocket");
+var emitCardsForEachSocket_1 = require("./emitCardsForEachSocket");
 var flop_1 = require("./flop");
 var passTurn_1 = require("./passTurn");
 var river_1 = require("./river");
@@ -47,7 +48,7 @@ var turn_1 = require("./turn");
 var prisma = new client_1.PrismaClient();
 function newBet(bet, player, table, socket, leftTable) {
     return __awaiter(this, void 0, void 0, function () {
-        var playersWhoDidNotFold, bet_1, newBalance_1, balance_1, playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, areBetsEqual, minBet, newBalance, balance;
+        var playersWhoDidNotFold, bet_1, minBet_1, newBalance_1, balance_1, playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, areBetsEqual, minBet, newBalance, newMinBet, balance;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -64,23 +65,29 @@ function newBet(bet, player, table, socket, leftTable) {
                         socket.emit('error_msg', 'Você já saiu da rodada, espere a próxima');
                         return [2 /*return*/];
                     }
-                    if (bet === 'fold') { // Folded
-                        player.folded = true;
-                        socket.emit('bet_response', 'Você saiu da rodada.');
-                        playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
-                        if (leftTable) {
-                            passTurn_1.passTurn(player, table, socket, false);
-                            return [2 /*return*/];
-                        }
-                        else if (playersWhoDidNotFold.length >= 2) {
-                            passTurn_1.passTurn(player, table, socket, false);
-                            return [2 /*return*/];
-                        }
-                        passTurn_1.passTurn(player, table, socket, true);
-                        return [2 /*return*/];
-                    }
-                    if (!(bet === 'call' || bet === 'check')) return [3 /*break*/, 2];
+                    if (!(bet === 'fold')) return [3 /*break*/, 6];
+                    player.folded = true;
+                    socket.emit('bet_response', 'Você saiu da rodada.');
+                    playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
+                    if (!leftTable) return [3 /*break*/, 2];
+                    return [4 /*yield*/, passTurn_1.passTurn(player, table, socket, false)];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+                case 2:
+                    if (!(playersWhoDidNotFold.length >= 2)) return [3 /*break*/, 4];
+                    return [4 /*yield*/, passTurn_1.passTurn(player, table, socket, false)];
+                case 3:
+                    _a.sent();
+                    return [2 /*return*/];
+                case 4: return [4 /*yield*/, passTurn_1.passTurn(player, table, socket, true)];
+                case 5:
+                    _a.sent();
+                    return [2 /*return*/];
+                case 6:
+                    if (!(bet === 'call' || bet === 'check')) return [3 /*break*/, 9];
                     bet_1 = table.totalHighestBet - player.totalBetValueOnRound;
+                    minBet_1 = (table.highestBet + table.bigBlind);
                     if (player.balance < bet_1) {
                         player.isTurn = false;
                         prisma.users.findUnique({ where: { id: player.databaseId }, select: { balance: true } }).then(function (user) { return __awaiter(_this, void 0, void 0, function () {
@@ -106,13 +113,16 @@ function newBet(bet, player, table, socket, leftTable) {
                                             table.highestBet = allInBet;
                                         }
                                         // Passar o turno para outro jogador...
-                                        passTurn_1.passTurn(player, table, socket);
+                                        return [4 /*yield*/, passTurn_1.passTurn(player, table, socket)];
+                                    case 1:
+                                        // Passar o turno para outro jogador...
+                                        _a.sent();
                                         // Emitir eventos para o front...
                                         socket.emit('bet_response', 'Aposta feita com sucesso!');
-                                        socket.emit('round_pot', table.roundPot);
-                                        socket.to(table.id).emit('round_pot', table.roundPot);
+                                        socket.emit('min_bet', minBet_1);
+                                        socket.to(table.id).emit('min_bet', minBet_1);
                                         return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } })];
-                                    case 1:
+                                    case 2:
                                         balance = (_a.sent()).balance;
                                         player.balance = balance;
                                         socket.emit('player', player);
@@ -158,13 +168,16 @@ function newBet(bet, player, table, socket, leftTable) {
                         table.highestBet = bet_1;
                     }
                     // Passar o turno para outro jogador...
-                    passTurn_1.passTurn(player, table, socket);
+                    return [4 /*yield*/, passTurn_1.passTurn(player, table, socket)];
+                case 7:
+                    // Passar o turno para outro jogador...
+                    _a.sent();
                     // Emitir eventos para o front...
                     socket.emit('bet_response', 'Aposta feita com sucesso!');
-                    socket.emit('round_pot', table.roundPot);
-                    socket.to(table.id).emit('round_pot', table.roundPot);
+                    socket.emit('min_bet', minBet_1);
+                    socket.to(table.id).emit('min_bet', minBet_1);
                     return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance_1.toFixed(0)) }, where: { id: player.databaseId } })];
-                case 1:
+                case 8:
                     balance_1 = (_a.sent()).balance;
                     player.balance = balance_1;
                     socket.emit('player', player);
@@ -192,7 +205,7 @@ function newBet(bet, player, table, socket, leftTable) {
                     }
                     ;
                     return [2 /*return*/];
-                case 2:
+                case 9:
                     minBet = (table.highestBet + table.bigBlind);
                     if (bet < minBet) {
                         socket.emit('error_msg', "Valor de aposta m\u00EDnimo: " + minBet);
@@ -224,16 +237,19 @@ function newBet(bet, player, table, socket, leftTable) {
                         table.highestBet = bet;
                     }
                     // Passar o turno para outro jogador...
-                    passTurn_1.passTurn(player, table, socket);
-                    // Emitir eventos para o front...
+                    return [4 /*yield*/, passTurn_1.passTurn(player, table, socket)];
+                case 10:
+                    // Passar o turno para outro jogador...
+                    _a.sent();
+                    newMinBet = (table.highestBet + table.bigBlind);
                     socket.emit('bet_response', 'Aposta feita com sucesso!');
-                    socket.emit('round_pot', table.roundPot);
-                    socket.to(table.id).emit('round_pot', table.roundPot);
-                    return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: player.databaseId } })];
-                case 3:
+                    socket.emit('min_bet', newMinBet);
+                    socket.to(table.id).emit('min_bet', newMinBet);
+                    return [4 /*yield*/, prisma.users.update({ data: { balance: Math.floor(newBalance) }, where: { id: player.databaseId } })];
+                case 11:
                     balance = (_a.sent()).balance;
                     player.balance = balance;
-                    socket.emit('player', player);
+                    emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players, table.cards);
                     emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
                     return [2 /*return*/];
             }

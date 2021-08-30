@@ -38,7 +38,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PokerTable = void 0;
 var passTurn_1 = require("../util/passTurn");
-var getPlayersWithoutCards_1 = require("../util/getPlayersWithoutCards");
+var emitAllPlayersForEachSocket_1 = require("../util/emitAllPlayersForEachSocket");
 var PokerTable = /** @class */ (function () {
     function PokerTable() {
     }
@@ -46,17 +46,22 @@ var PokerTable = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             var playerIndex, socketIndex;
             return __generator(this, function (_a) {
-                player.isTurn = false;
-                if (isRefresh) {
-                    playerIndex = table.players.indexOf(player);
-                    table.players.splice(playerIndex, 1);
-                    socketIndex = table.sockets.indexOf(socket);
-                    table.sockets.splice(socketIndex, 1);
+                switch (_a.label) {
+                    case 0:
+                        player.isTurn = false;
+                        if (isRefresh) {
+                            playerIndex = table.players.indexOf(player);
+                            table.players.splice(playerIndex, 1);
+                            socketIndex = table.sockets.indexOf(socket);
+                            table.sockets.splice(socketIndex, 1);
+                        }
+                        socket.emit('player', undefined);
+                        emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
+                        return [4 /*yield*/, passTurn_1.passTurn(player, table, socket)];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
                 }
-                socket.to(table.id).emit('all_players', getPlayersWithoutCards_1.getPlayersWithoutCards(table.players, player));
-                socket.emit('player', undefined);
-                passTurn_1.passTurn(player, table, socket);
-                return [2 /*return*/];
             });
         });
     };

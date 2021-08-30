@@ -46,28 +46,31 @@ var gameSetup_1 = require("./gameSetup");
 var prisma = new client_1.PrismaClient();
 function startRound(table, socket, isNewRound, justFolded) {
     return __awaiter(this, void 0, void 0, function () {
-        var deck, sb_1, socket_1, interval, utg1_1, socket_2, interval;
+        var deck, sb_1, socket_1, interval, utg1_1, socket_2, interval, minBet;
         var _this = this;
         return __generator(this, function (_a) {
-            table.players.forEach(function (player) { return __awaiter(_this, void 0, void 0, function () {
-                var equivalentSocket, pokerTable;
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            if (!(player.balance < (table.bigBlind * 5))) return [3 /*break*/, 2];
-                            equivalentSocket = table.sockets.find(function (s) { return s.id === player.id; });
-                            if (!equivalentSocket)
-                                return [2 /*return*/];
-                            pokerTable = new PokerTable_1.PokerTable();
-                            return [4 /*yield*/, pokerTable.leave(table, player, equivalentSocket, true)];
-                        case 1:
-                            _a.sent();
-                            equivalentSocket.emit('error_msg', 'Saldo muito baixo para mesa');
-                            _a.label = 2;
-                        case 2: return [2 /*return*/];
-                    }
-                });
-            }); });
+            /* Gambiarra para expulsar vários jogadores caso necessário (apenas 1 forEach não estava funcionando) */
+            table.players.forEach(function () {
+                table.players.forEach(function (player) { return __awaiter(_this, void 0, void 0, function () {
+                    var equivalentSocket, pokerTable;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                if (!(player.balance < (table.bigBlind * 5))) return [3 /*break*/, 2];
+                                equivalentSocket = table.sockets.find(function (s) { return s.id === player.id; });
+                                if (!equivalentSocket)
+                                    return [2 /*return*/];
+                                pokerTable = new PokerTable_1.PokerTable();
+                                return [4 /*yield*/, pokerTable.leave(table, player, equivalentSocket, true)];
+                            case 1:
+                                _a.sent();
+                                equivalentSocket.emit('error_msg', 'Saldo muito baixo para mesa');
+                                _a.label = 2;
+                            case 2: return [2 /*return*/];
+                        }
+                    });
+                }); });
+            });
             // Impedir que rodada comece com 1 ou menos jogadores
             if (table.players.length <= 1) {
                 return [2 /*return*/];
@@ -121,7 +124,7 @@ function startRound(table, socket, isNewRound, justFolded) {
                             player.totalBetValue = (table.bigBlind / 2);
                             player.totalBetValueOnRound = (table.bigBlind / 2);
                             player.balance -= (table.bigBlind / 2);
-                            return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })];
+                            return [4 /*yield*/, prisma.users.update({ data: { balance: Math.floor(player.balance) }, where: { id: player.databaseId } })];
                         case 1:
                             _a.sent();
                             return [3 /*break*/, 5];
@@ -130,7 +133,7 @@ function startRound(table, socket, isNewRound, justFolded) {
                             player.totalBetValue = table.bigBlind;
                             player.totalBetValueOnRound = table.bigBlind;
                             player.balance -= table.bigBlind;
-                            return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(player.balance.toFixed(0)) }, where: { id: player.databaseId } })];
+                            return [4 /*yield*/, prisma.users.update({ data: { balance: Math.floor(player.balance) }, where: { id: player.databaseId } })];
                         case 3:
                             _a.sent();
                             return [3 /*break*/, 5];
@@ -148,6 +151,7 @@ function startRound(table, socket, isNewRound, justFolded) {
                     }
                 });
             }); });
+            minBet = (table.highestBet + table.bigBlind);
             table.roundStatus = true;
             isNewRound ? table.highestBet = (table.bigBlind) : table.highestBet = 0;
             isNewRound ? table.totalHighestBet = (table.bigBlind) : table.totalHighestBet = 0;
@@ -160,8 +164,10 @@ function startRound(table, socket, isNewRound, justFolded) {
             table.riverStatus = false;
             socket.emit('round_pot', table.roundPot);
             socket.emit('table_cards', table.cards);
+            socket.emit('min_bet', minBet);
             socket.to(table.id).emit('round_pot', table.roundPot);
             socket.to(table.id).emit('table_cards', table.cards);
+            socket.to(table.id).emit('min_bet', minBet);
             emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players);
             emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
             return [2 /*return*/];

@@ -48,10 +48,11 @@ var turn_1 = require("./turn");
 var river_1 = require("./river");
 var prisma = new client_1.PrismaClient();
 function passTurn(player, table, socket, isFold) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function () {
-        var playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, winner, newBalance, balance, playerIndex_1, nextPlayer_1, socket_1, interval, nextPlayerThatDidNotFoldAndIsNotAllIn_1, socket_2, interval;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, winner, newBalance, balance, playerIndex_1, nextPlayer_1, socket_1, interval, nextPlayerThatDidNotFoldAndIsNotAllIn_1, socket_2, interval, playerIndex_2, nextPlayer_2, socket_3, interval, nextPlayerThatDidNotFoldAndIsNotAllIn_2, socket_4, interval;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
                     table.players.forEach(function (player) { return player.isTurn = false; });
                     playersWhoDidNotFold = table.players.filter(function (player) { return player.folded === false; });
@@ -59,91 +60,155 @@ function passTurn(player, table, socket, isFold) {
                     if (!(playersWhoDidNotFold.length === 1)) return [3 /*break*/, 2];
                     winner = playersWhoDidNotFold[0];
                     winner.isTurn = false;
-                    newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * 2);
+                    // Zerar o pot caso não seja fold, pois se não for fold, não terá outro round.
+                    if (!isFold) {
+                        table.roundPot = 0;
+                    }
+                    newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * table.houseSlice);
                     socket.emit('round_pot', table.roundPot);
                     socket.emit('table_cards', table.cards);
-                    socket.emit('winner', winner.databaseId);
                     socket.to(table.id).emit('round_pot', table.roundPot);
                     socket.to(table.id).emit('table_cards', table.cards);
-                    socket.to(table.id).emit('winner', winner.databaseId);
                     table.roundStatus = false;
-                    return [4 /*yield*/, prisma.users.update({ data: { balance: parseInt(newBalance.toFixed(0)) }, where: { id: winner.databaseId } })];
+                    return [4 /*yield*/, prisma.users.update({ data: { balance: Math.floor(newBalance) }, where: { id: winner.databaseId } })];
                 case 1:
-                    balance = (_a.sent()).balance;
+                    balance = (_c.sent()).balance;
                     winner.balance = balance;
                     emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
                     if (isFold) {
-                        // Caso o jogador tenha saido da mesa, não emitir o player para ele, assim fazendo com que no front ele não apareca na mesa
+                        // Caso o jogador tenha saido da mesa, não emitir o player para ele, assim fazendo com que no front ele não apareça na mesa
                         socket.emit('player', player);
                         movePlayersInTable_1.movePlayersInTable(table);
                         startRound_1.startRound(table, socket, true);
                     }
                     return [2 /*return*/];
                 case 2:
-                    if (playersWhoDidNotFoldAndAreNotAllIn.length === 1 && table.totalBets >= playersWhoDidNotFold.length) {
-                        if (playersWhoDidNotFoldAndAreNotAllIn[0].totalBetValue >= table.highestBet || playersWhoDidNotFoldAndAreNotAllIn[0].balance <= 0) {
+                    if (playersWhoDidNotFoldAndAreNotAllIn.length === 0) {
+                        if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                            setTimeout(function () { return flop_1.flop(table, socket); }, 500);
+                            setTimeout(function () { return turn_1.turn(table, socket); }, 2000);
+                            setTimeout(function () { return river_1.river(table, socket); }, 4000);
+                            setTimeout(function () { return showdown_1.showdonw(table, socket); }, 7000);
+                            return [2 /*return*/];
+                        }
+                        else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
+                            setTimeout(function () { return turn_1.turn(table, socket); }, 500);
+                            setTimeout(function () { return river_1.river(table, socket); }, 2000);
+                            setTimeout(function () { return showdown_1.showdonw(table, socket); }, 4000);
+                            return [2 /*return*/];
+                        }
+                        else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
+                            setTimeout(function () { return river_1.river(table, socket); }, 500);
+                            setTimeout(function () { return showdown_1.showdonw(table, socket); }, 2000);
+                            return [2 /*return*/];
+                        }
+                        else if (table.flopStatus && table.turnStatus && table.riverStatus) {
+                            setTimeout(function () { return showdown_1.showdonw(table, socket); }, 500);
+                            return [2 /*return*/];
+                        }
+                        ;
+                        return [2 /*return*/];
+                    }
+                    else if (playersWhoDidNotFoldAndAreNotAllIn.length === 1 && table.totalBets >= playersWhoDidNotFold.length) {
+                        if (((_a = playersWhoDidNotFoldAndAreNotAllIn[0]) === null || _a === void 0 ? void 0 : _a.totalBetValue) >= table.highestBet || ((_b = playersWhoDidNotFoldAndAreNotAllIn[0]) === null || _b === void 0 ? void 0 : _b.balance) <= 0) {
                             if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
-                                setTimeout(function () { return flop_1.flop(table, socket); }, 1000);
-                                setTimeout(function () { return turn_1.turn(table, socket); }, 3000);
-                                setTimeout(function () { return river_1.river(table, socket); }, 6000);
-                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 11000);
+                                setTimeout(function () { return flop_1.flop(table, socket); }, 500);
+                                setTimeout(function () { return turn_1.turn(table, socket); }, 2000);
+                                setTimeout(function () { return river_1.river(table, socket); }, 4000);
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 7000);
                                 return [2 /*return*/];
                             }
                             else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
-                                setTimeout(function () { return turn_1.turn(table, socket); }, 1000);
-                                setTimeout(function () { return river_1.river(table, socket); }, 3000);
-                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 8000);
+                                setTimeout(function () { return turn_1.turn(table, socket); }, 500);
+                                setTimeout(function () { return river_1.river(table, socket); }, 2000);
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 4000);
                                 return [2 /*return*/];
                             }
                             else if (table.flopStatus && table.turnStatus && !table.riverStatus) {
-                                setTimeout(function () { return river_1.river(table, socket); }, 1000);
-                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 5000);
+                                setTimeout(function () { return river_1.river(table, socket); }, 500);
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 2000);
                                 return [2 /*return*/];
                             }
                             else if (table.flopStatus && table.turnStatus && table.riverStatus) {
-                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 2000);
+                                setTimeout(function () { return showdown_1.showdonw(table, socket); }, 500);
                                 return [2 /*return*/];
                             }
                             ;
                             return [2 /*return*/];
                         }
+                        else {
+                            playerIndex_1 = table.players.indexOf(player);
+                            nextPlayer_1 = table.players.find(function (player, index) { return player.allIn === false && player.folded === false && playerIndex_1 < index; });
+                            table.players.forEach(function (player) {
+                                player.isTurn = false;
+                                player.timer = 45;
+                            });
+                            if (nextPlayer_1) {
+                                nextPlayer_1.isTurn = true;
+                                socket_1 = table.sockets.find(function (socket) { return socket.id === nextPlayer_1.id; });
+                                if (!socket_1) {
+                                    return [2 /*return*/];
+                                }
+                                socket_1.emit('your_turn');
+                                interval = decrementTimer_1.decrementTimer(nextPlayer_1, table, socket_1);
+                                if (isFold) {
+                                    clearInterval(interval);
+                                }
+                            }
+                            else {
+                                nextPlayerThatDidNotFoldAndIsNotAllIn_1 = table.players.find(function (player) { return player.folded === false && player.allIn === false; });
+                                if (nextPlayerThatDidNotFoldAndIsNotAllIn_1) {
+                                    nextPlayerThatDidNotFoldAndIsNotAllIn_1.isTurn = true;
+                                    socket_2 = table.sockets.find(function (socket) { return socket.id === nextPlayerThatDidNotFoldAndIsNotAllIn_1.id; });
+                                    if (!socket_2) {
+                                        return [2 /*return*/];
+                                    }
+                                    socket_2.emit('your_turn');
+                                    interval = decrementTimer_1.decrementTimer(nextPlayerThatDidNotFoldAndIsNotAllIn_1, table, socket_2);
+                                    if (isFold) {
+                                        clearInterval(interval);
+                                    }
+                                }
+                            }
+                        }
                         return [2 /*return*/];
                     }
                     else {
-                        playerIndex_1 = table.players.indexOf(player);
-                        nextPlayer_1 = table.players.find(function (player, index) { return player.folded === false && playerIndex_1 < index; });
+                        playerIndex_2 = table.players.indexOf(player);
+                        nextPlayer_2 = table.players.find(function (player, index) { return player.allIn === false && player.folded === false && playerIndex_2 < index; });
                         table.players.forEach(function (player) {
+                            player.isTurn = false;
                             player.timer = 45;
                         });
-                        if (nextPlayer_1) {
-                            nextPlayer_1.isTurn = true;
-                            socket_1 = table.sockets.find(function (socket) { return socket.id === nextPlayer_1.id; });
-                            if (!socket_1) {
+                        if (nextPlayer_2) {
+                            nextPlayer_2.isTurn = true;
+                            socket_3 = table.sockets.find(function (socket) { return socket.id === nextPlayer_2.id; });
+                            if (!socket_3) {
                                 return [2 /*return*/];
                             }
-                            socket_1.emit('your_turn');
-                            interval = decrementTimer_1.decrementTimer(nextPlayer_1, table, socket_1);
+                            socket_3.emit('your_turn');
+                            interval = decrementTimer_1.decrementTimer(nextPlayer_2, table, socket_3);
                             if (isFold) {
                                 clearInterval(interval);
                             }
                         }
                         else {
-                            nextPlayerThatDidNotFoldAndIsNotAllIn_1 = table.players.find(function (player) { return player.folded === false; });
-                            if (nextPlayerThatDidNotFoldAndIsNotAllIn_1) {
-                                nextPlayerThatDidNotFoldAndIsNotAllIn_1.isTurn = true;
-                                socket_2 = table.sockets.find(function (socket) { return socket.id === nextPlayerThatDidNotFoldAndIsNotAllIn_1.id; });
-                                if (!socket_2) {
+                            nextPlayerThatDidNotFoldAndIsNotAllIn_2 = table.players.find(function (player) { return player.folded === false && player.allIn === false; });
+                            if (nextPlayerThatDidNotFoldAndIsNotAllIn_2) {
+                                nextPlayerThatDidNotFoldAndIsNotAllIn_2.isTurn = true;
+                                socket_4 = table.sockets.find(function (socket) { return socket.id === nextPlayerThatDidNotFoldAndIsNotAllIn_2.id; });
+                                if (!socket_4) {
                                     return [2 /*return*/];
                                 }
-                                socket_2.emit('your_turn');
-                                interval = decrementTimer_1.decrementTimer(nextPlayerThatDidNotFoldAndIsNotAllIn_1, table, socket_2);
+                                socket_4.emit('your_turn');
+                                interval = decrementTimer_1.decrementTimer(nextPlayerThatDidNotFoldAndIsNotAllIn_2, table, socket_4);
                                 if (isFold) {
                                     clearInterval(interval);
                                 }
                             }
                         }
                     }
-                    _a.label = 3;
+                    _c.label = 3;
                 case 3: return [2 /*return*/];
             }
         });

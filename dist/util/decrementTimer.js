@@ -45,7 +45,7 @@ function decrementTimer(player, table, socket) {
             switch (_a.label) {
                 case 0:
                     // Garantir que o jogador passado para a funcão tem a vez de jogar
-                    if (!player.isTurn) {
+                    if (!player.isTurn || !table.roundPot) {
                         clearInterval(timerInterval);
                         return [2 /*return*/];
                     }

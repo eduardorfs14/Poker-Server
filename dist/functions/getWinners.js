@@ -16,20 +16,9 @@ function getWinners(players, tableCards) {
     });
     var solvedHands = pokersolver_1.Hand.winners(hands);
     if (solvedHands.length > 1) {
-        // Empate...
-        players.forEach(function (player) {
-            if (!player.cards) {
-                throw new Error('Player does not have cards');
-            }
-            ;
-            var playerHand = getCombination_1.getCombination(player.cards, tableCards);
-            var solvedHandsFormated = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');
-            var playerHandCardsFormated = playerHand.toString().repeat(solvedHands.length).replace(/\s/g, '');
-            if (solvedHandsFormated === playerHandCardsFormated) {
-                winners.push(player);
-            }
-            ;
-        });
+        for (var i = 0; i < solvedHands.length; i++) {
+            winners.push(players[i]);
+        }
     }
     ;
     players.forEach(function (player) {
@@ -39,7 +28,6 @@ function getWinners(players, tableCards) {
         ;
         var playerHand = getCombination_1.getCombination(player.cards, tableCards);
         var solvedHandsFormated = solvedHands.toString().replace(/\s/g, '').replace(/,/g, '');
-        ;
         var playerHandCardsFormated = playerHand.cards.toString().replace(/\s/g, '').replace(/,/g, '');
         if (solvedHandsFormated === playerHandCardsFormated) {
             winners.push(player);

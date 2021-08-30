@@ -49,6 +49,7 @@ var getTables_1 = require("./util/getTables");
 var emitAllPlayersForEachSocket_1 = require("./util/emitAllPlayersForEachSocket");
 var newBet_1 = require("./util/newBet");
 var PokerTable_1 = require("./PokerTable/PokerTable");
+var emitCardsForEachSocket_1 = require("./util/emitCardsForEachSocket");
 var app = express_1.default();
 var httpServer = http_1.default.createServer(app);
 var io = new socket_io_1.default.Server(httpServer, { cors: {} });
@@ -114,7 +115,6 @@ io.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0,
                                             socket.emit('error_msg', 'Saldo insuficiente para entrar na mesa');
                                             return [2 /*return*/];
                                         }
-                                        player.avatarURL = databasePlayer.avatar_url;
                                         player.email = databasePlayer.email;
                                         player.databaseId = databasePlayer.id;
                                         player.id = socket.id;
@@ -152,6 +152,27 @@ io.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0,
                                 }
                                 newBet_1.newBet(bet, player, table, socket);
                                 return [2 /*return*/];
+                            });
+                        }); });
+                        // Quando o jogador adiciona saldo
+                        socket.on('add_balance', function () { return __awaiter(void 0, void 0, void 0, function () {
+                            var res;
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0:
+                                        if (!player)
+                                            return [2 /*return*/];
+                                        return [4 /*yield*/, prisma.users.findUnique({ select: { balance: true }, where: { id: player.id } })];
+                                    case 1:
+                                        res = _a.sent();
+                                        if (!res)
+                                            return [2 /*return*/];
+                                        player.balance = res.balance;
+                                        console.log(player.balance);
+                                        emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
+                                        emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players, table.cards);
+                                        return [2 /*return*/];
+                                }
                             });
                         }); });
                         socket.on('disconnect', function () { return __awaiter(void 0, void 0, void 0, function () {
