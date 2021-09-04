@@ -66,8 +66,40 @@ export async function showdonw(table: Table, socket: Socket) {
               winner.balance = Math.floor(maxWin);
               pot -= maxWin;
             } else {
+              // Ganhou o pot inteiro, portanto já pode acabar a rodada
               winner.balance = Math.floor(newBalance);
-              pot -= newBalance;
+    
+              // Acabar o round
+              table.roundStatus = false;
+            
+            const roundResultInfo = table.players.map(player => {
+              const oldBalance = oldBalances.find(balance => balance.id === player.id);
+              if (!oldBalance) return;
+    
+              const profit = ((player.balance - oldBalance?.balance) - player.totalBetValue);
+                
+              return {
+                id: player.databaseId,
+                name: player.name,
+                avatar_url: player.avatar_url,
+                totalBetValue: player.totalBetValue,
+                folded: player.folded,
+                cards: player.cards,
+                profit,
+              }
+            });
+                
+            socket.emit('round_result', roundResultInfo);
+            socket.to(table.id).emit('round_result', roundResultInfo);
+    
+            // Garantir que o pot seja 0, para que caso o loop não funcione por algum motivo não pague ninguém a mais.
+            pot -= pot;
+                
+            // Iniciar outro round...
+            movePlayersInTable(table);
+            await startRound(table, socket, true);
+            await prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } });
+            return;
             }
             
             await prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } });
@@ -112,6 +144,7 @@ export async function showdonw(table: Table, socket: Socket) {
   
     for (let i = 0; i < winners.length; i++) {
       const winner = winners[i];
+      console.log(winner.name, i);
   
       if (pot <= 0) {
         table.roundStatus = false;
@@ -126,20 +159,56 @@ export async function showdonw(table: Table, socket: Socket) {
         return;
       }
   
-       if (winner.allIn === true) {
+      if (winner.allIn === true) {
         const maxWin = (winner.totalBetValue * playersThatDidNotFold.length) - (((winner.totalBetValue * playersThatDidNotFold.length) / 100) * table.houseSlice);
         const newBalance = (winner.balance + pot) - ((pot / 100) * table.houseSlice);
 
+        console.log(maxWin, newBalance, i);
+
         if (maxWin < newBalance) {
+          // O ganho tem que ser limitado
           winner.balance = Math.floor(maxWin);
           pot -= maxWin;
         } else {
+          // Ganhou o pot inteiro, portanto já pode acabar a rodada
           winner.balance = Math.floor(newBalance);
-          pot -= newBalance;
+
+          // Acabar o round
+          table.roundStatus = false;
+        
+          const roundResultInfo = table.players.map(player => {
+            const oldBalance = oldBalances.find(balance => balance.id === player.id);
+            if (!oldBalance) return;
+
+            const profit = ((player.balance - oldBalance?.balance) - player.totalBetValue);
+            
+            return {
+              id: player.databaseId,
+              name: player.name,
+              avatar_url: player.avatar_url,
+              totalBetValue: player.totalBetValue,
+              folded: player.folded,
+              cards: player.cards,
+              profit,
+            }
+          });
+            
+          socket.emit('round_result', roundResultInfo);
+          socket.to(table.id).emit('round_result', roundResultInfo);
+
+          // Garantir que o pot seja 0, para que caso o loop não funcione por algum motivo não pague ninguém a mais.
+          pot -= pot;
+            
+          // Iniciar outro round...
+          movePlayersInTable(table);
+          await startRound(table, socket, true);
+          await prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } });
+          return;
         }
   
         await prisma.users.update({ data: { balance: winner.balance }, where: { id: winner.databaseId } });
       } else {
+        console.log('Hi', i, table.roundStatus, winner.allIn, winner.totalBetValue);
         const newBalance = (winner.balance + pot) - ((pot / 100) * table.houseSlice);
         winner.balance = Math.floor(newBalance);
         

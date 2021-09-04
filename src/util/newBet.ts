@@ -55,6 +55,7 @@ export async function newBet(
 
       if (player.balance < bet) {
         player.isTurn = false;
+        player.allIn = true;
         prisma.users.findUnique({ where: { id: player.databaseId }, select: { balance: true } }).then(async user => {
           if (!user) {
             return;
@@ -98,6 +99,7 @@ export async function newBet(
 
           if (areBetsEqual && playersWhoDidNotFoldAndAreNotAllIn.length > 1) {
             if (table.totalBets >= playersWhoDidNotFoldAndAreNotAllIn.length) {
+              console.log('G')
               if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
                 flop(table, socket);
               } else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {
@@ -112,6 +114,8 @@ export async function newBet(
 
           return;
         });
+
+        player.allIn = true;
 
         return;
       };
@@ -150,6 +154,7 @@ export async function newBet(
 
       if (areBetsEqual) {
         if (table.totalBets >= playersWhoDidNotFoldAndAreNotAllIn.length) {
+          console.log('G')
           if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
             flop(table, socket);
           } else if (table.flopStatus && !table.turnStatus && !table.riverStatus) {

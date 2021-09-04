@@ -37,15 +37,36 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startRound = void 0;
+var generateTurn_1 = require("./../functions/generateTurn");
 var client_1 = require("@prisma/client");
+var generateFlop_1 = require("../functions/generateFlop");
 var PokerTable_1 = require("../PokerTable/PokerTable");
 var decrementTimer_1 = require("./decrementTimer");
 var emitAllPlayersForEachSocket_1 = require("./emitAllPlayersForEachSocket");
 var emitCardsForEachSocket_1 = require("./emitCardsForEachSocket");
 var gameSetup_1 = require("./gameSetup");
+var generateRiver_1 = require("../functions/generateRiver");
 var prisma = new client_1.PrismaClient();
 function startRound(table, socket, isNewRound, justFolded) {
     return __awaiter(this, void 0, void 0, function () {
+        // Pegar o flop
+        function getFlop() {
+            var _a = generateFlop_1.generateFlop(deck), generatedFlop = _a.generatedFlop, newDeck = _a.newDeck;
+            table.deck = newDeck;
+            table.cards = table.cards.concat(generatedFlop);
+        }
+        // Pegar o turn
+        function getTurn() {
+            var _a = generateTurn_1.generateTurn(deck), generatedTurn = _a.generatedTurn, newDeck = _a.newDeck;
+            table.deck = newDeck;
+            table.cards = table.cards.concat(generatedTurn);
+        }
+        // Pegar o river
+        function getRiver() {
+            var _a = generateRiver_1.generateRiver(deck), generatedRiver = _a.generatedRiver, newDeck = _a.newDeck;
+            table.deck = newDeck;
+            table.cards = table.cards.concat(generatedRiver);
+        }
         var deck, sb_1, socket_1, interval, utg1_1, socket_2, interval, minBet;
         var _this = this;
         return __generator(this, function (_a) {
@@ -170,6 +191,9 @@ function startRound(table, socket, isNewRound, justFolded) {
             socket.to(table.id).emit('min_bet', minBet);
             emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players);
             emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
+            getFlop();
+            getTurn();
+            getRiver();
             return [2 /*return*/];
         });
     });

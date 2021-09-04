@@ -1,11 +1,14 @@
+import { generateTurn } from './../functions/generateTurn';
 import { PrismaClient } from '@prisma/client';
 import { Socket } from "socket.io";
+import { generateFlop } from '../functions/generateFlop';
 import { Table } from "../interfaces/Table";
 import { PokerTable } from '../PokerTable/PokerTable';
 import { decrementTimer } from "./decrementTimer";
 import { emitAllPlayersForEachSocket } from "./emitAllPlayersForEachSocket";
 import { emitCardsForEachSocket } from "./emitCardsForEachSocket";
 import { gameSetup } from "./gameSetup";
+import { generateRiver } from '../functions/generateRiver';
 
 const prisma = new PrismaClient();
 
@@ -116,4 +119,29 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
   socket.to(table.id).emit('min_bet', minBet);
   emitCardsForEachSocket(table.sockets, table.players);
   emitAllPlayersForEachSocket(table.sockets, table.players);
+
+  // Pegar o flop
+  function getFlop() {
+    const { generatedFlop, newDeck } = generateFlop(deck);
+    table.deck = newDeck;
+    table.cards = table.cards.concat(generatedFlop);
+  }
+
+  // Pegar o turn
+  function getTurn() {
+    const { generatedTurn, newDeck } = generateTurn(deck);
+    table.deck = newDeck;
+    table.cards = table.cards.concat(generatedTurn);
+  }
+
+  // Pegar o river
+  function getRiver() {
+    const { generatedRiver, newDeck } = generateRiver(deck);
+    table.deck = newDeck;
+    table.cards = table.cards.concat(generatedRiver);
+  }
+
+  getFlop();
+  getTurn();
+  getRiver();
 }

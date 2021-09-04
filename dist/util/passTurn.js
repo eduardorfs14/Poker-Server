@@ -66,9 +66,9 @@ function passTurn(player, table, socket, isFold) {
                     }
                     newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * table.houseSlice);
                     socket.emit('round_pot', table.roundPot);
-                    socket.emit('table_cards', table.cards);
+                    // socket.emit('table_cards', table.cards);
                     socket.to(table.id).emit('round_pot', table.roundPot);
-                    socket.to(table.id).emit('table_cards', table.cards);
+                    // socket.to(table.id).emit('table_cards', table.cards);
                     table.roundStatus = false;
                     return [4 /*yield*/, prisma.users.update({ data: { balance: Math.floor(newBalance) }, where: { id: winner.databaseId } })];
                 case 1:
@@ -84,6 +84,7 @@ function passTurn(player, table, socket, isFold) {
                     return [2 /*return*/];
                 case 2:
                     if (playersWhoDidNotFoldAndAreNotAllIn.length === 0) {
+                        console.log('G');
                         if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
                             setTimeout(function () { return flop_1.flop(table, socket); }, 500);
                             setTimeout(function () { return turn_1.turn(table, socket); }, 2000);
@@ -111,6 +112,7 @@ function passTurn(player, table, socket, isFold) {
                     }
                     else if (playersWhoDidNotFoldAndAreNotAllIn.length === 1 && table.totalBets >= playersWhoDidNotFold.length) {
                         if (((_a = playersWhoDidNotFoldAndAreNotAllIn[0]) === null || _a === void 0 ? void 0 : _a.totalBetValue) >= table.highestBet || ((_b = playersWhoDidNotFoldAndAreNotAllIn[0]) === null || _b === void 0 ? void 0 : _b.balance) <= 0) {
+                            console.log('G');
                             if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
                                 setTimeout(function () { return flop_1.flop(table, socket); }, 500);
                                 setTimeout(function () { return turn_1.turn(table, socket); }, 2000);

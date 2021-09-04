@@ -90,6 +90,7 @@ function newBet(bet, player, table, socket, leftTable) {
                     minBet_1 = (table.highestBet + table.bigBlind);
                     if (player.balance < bet_1) {
                         player.isTurn = false;
+                        player.allIn = true;
                         prisma.users.findUnique({ where: { id: player.databaseId }, select: { balance: true } }).then(function (user) { return __awaiter(_this, void 0, void 0, function () {
                             var allInBet, newBalance, balance, playersWhoDidNotFold, playersWhoDidNotFoldAndAreNotAllIn, areBetsEqual;
                             return __generator(this, function (_a) {
@@ -132,6 +133,7 @@ function newBet(bet, player, table, socket, leftTable) {
                                         areBetsEqual = playersWhoDidNotFoldAndAreNotAllIn.every(function (player) { return player.totalBetValueOnRound === table.totalHighestBet; });
                                         if (areBetsEqual && playersWhoDidNotFoldAndAreNotAllIn.length > 1) {
                                             if (table.totalBets >= playersWhoDidNotFoldAndAreNotAllIn.length) {
+                                                console.log('G');
                                                 if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
                                                     flop_1.flop(table, socket);
                                                 }
@@ -152,6 +154,7 @@ function newBet(bet, player, table, socket, leftTable) {
                                 }
                             });
                         }); });
+                        player.allIn = true;
                         return [2 /*return*/];
                     }
                     ;
@@ -187,6 +190,7 @@ function newBet(bet, player, table, socket, leftTable) {
                     areBetsEqual = playersWhoDidNotFoldAndAreNotAllIn.every(function (player) { return player.totalBetValueOnRound === table.totalHighestBet; });
                     if (areBetsEqual) {
                         if (table.totalBets >= playersWhoDidNotFoldAndAreNotAllIn.length) {
+                            console.log('G');
                             if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
                                 flop_1.flop(table, socket);
                             }

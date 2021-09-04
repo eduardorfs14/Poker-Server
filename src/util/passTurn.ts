@@ -32,10 +32,10 @@ export async function passTurn(player: Player, table: Table, socket: Socket, isF
     
     const newBalance = (winner.balance + table.roundPot) - ((table.roundPot / 100) * table.houseSlice);
     socket.emit('round_pot', table.roundPot);
-    socket.emit('table_cards', table.cards);
+    // socket.emit('table_cards', table.cards);
 
     socket.to(table.id).emit('round_pot', table.roundPot);
-    socket.to(table.id).emit('table_cards', table.cards);
+    // socket.to(table.id).emit('table_cards', table.cards);
 
     table.roundStatus = false;
     const { balance } = await prisma.users.update({ data: { balance: Math.floor(newBalance) }, where: { id: winner.databaseId } });
@@ -52,6 +52,7 @@ export async function passTurn(player: Player, table: Table, socket: Socket, isF
 
     return;
   } else if (playersWhoDidNotFoldAndAreNotAllIn.length === 0) {
+    console.log('G')
     if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
       setTimeout(() => flop(table, socket), 500);
       setTimeout(() => turn(table, socket), 2000);
@@ -75,6 +76,7 @@ export async function passTurn(player: Player, table: Table, socket: Socket, isF
     return;
   } else if (playersWhoDidNotFoldAndAreNotAllIn.length === 1 && table.totalBets >= playersWhoDidNotFold.length) {
       if (playersWhoDidNotFoldAndAreNotAllIn[0]?.totalBetValue >= table.highestBet || playersWhoDidNotFoldAndAreNotAllIn[0]?.balance <= 0) {
+        console.log('G')
         if (!table.flopStatus && !table.turnStatus && !table.riverStatus) {
           setTimeout(() => flop(table, socket), 500);
           setTimeout(() => turn(table, socket), 2000);
