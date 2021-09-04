@@ -34,28 +34,5 @@ export function generateDeck() {
     deck[location2] = tmp;
   }
 
-  // P1
-  deck[4] = 'As';
-  deck[5] = 'Ah';
-
-  // P2
-  deck[0] = 'Ac';
-  deck[1] = 'Ad';
-
-  // P3
-  deck[2] = '2c';
-  deck[3] = '3d';
-
-  // FLOP
-  deck[6] = '8h';
-  deck[7] = '9d';
-  deck[8] = '4c';
-
-  // TURN
-  deck[9] = 'Kh';
-
-  // RIVER
-  deck[10] = 'Qd';
-
   return deck;
 }
