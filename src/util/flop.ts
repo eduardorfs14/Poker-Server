@@ -27,6 +27,6 @@ export function flop(table: Table, socket: Socket) {
   socket.emit('table_cards', flop);
   socket.to(table.id).emit('table_cards', flop);
   socket.to(table.id).emit('min_bet', minBet);
-  emitCardsForEachSocket(table.sockets, table.players, table.cards);
+  emitCardsForEachSocket(table, table.cards);
   emitAllPlayersForEachSocket(table.sockets, table.players);
 }

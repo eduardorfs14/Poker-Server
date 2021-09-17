@@ -126,7 +126,7 @@ io.on('connection', async (socket: Socket) => {
       player.balance = res.balance;
       console.log(player.balance);
       emitAllPlayersForEachSocket(table.sockets, table.players);
-      emitCardsForEachSocket(table.sockets, table.players, table.cards);
+      emitCardsForEachSocket(table, table.cards);
     });
 
     socket.on('disconnect', async () => {

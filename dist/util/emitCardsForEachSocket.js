@@ -38,20 +38,49 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emitCardsForEachSocket = void 0;
 var getCombination_1 = require("../functions/getCombination");
-function emitCardsForEachSocket(sockets, players, tableCards) {
+function emitCardsForEachSocket(table, tableCards) {
     var _this = this;
-    sockets.forEach(function (socket) { return __awaiter(_this, void 0, void 0, function () {
-        var player, cards, combination;
+    table.sockets.forEach(function (socket) { return __awaiter(_this, void 0, void 0, function () {
+        var player, cards, combination, flop, flop, turn;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    player = players.find(function (player) { return player.id === socket.id; });
+                    player = table.players.find(function (player) { return player.id === socket.id; });
                     cards = player === null || player === void 0 ? void 0 : player.cards;
                     if (!cards) {
                         return [2 /*return*/];
                     }
-                    return [4 /*yield*/, getCombination_1.getCombination(cards, tableCards)];
+                    if (!(!table.flopStatus && !table.turnStatus && !table.riverStatus)) return [3 /*break*/, 2];
+                    return [4 /*yield*/, getCombination_1.getCombination(cards, [])];
                 case 1:
+                    // Não teve nenhuma carta da mesa liberada
+                    combination = _a.sent();
+                    return [3 /*break*/, 8];
+                case 2:
+                    if (!(table.flopStatus && !table.turnStatus && !table.riverStatus)) return [3 /*break*/, 4];
+                    flop = [table.cards[0], table.cards[1], table.cards[2]];
+                    return [4 /*yield*/, getCombination_1.getCombination(cards, flop)];
+                case 3:
+                    combination = _a.sent();
+                    return [3 /*break*/, 8];
+                case 4:
+                    if (!(table.flopStatus && table.turnStatus && !table.riverStatus)) return [3 /*break*/, 6];
+                    flop = [table.cards[0], table.cards[1], table.cards[2]];
+                    turn = flop.concat([table.cards[3]]);
+                    return [4 /*yield*/, getCombination_1.getCombination(cards, turn)];
+                case 5:
+                    combination = _a.sent();
+                    return [3 /*break*/, 8];
+                case 6:
+                    if (!(table.flopStatus && table.turnStatus && table.riverStatus)) return [3 /*break*/, 8];
+                    return [4 /*yield*/, getCombination_1.getCombination(cards, tableCards)];
+                case 7:
+                    combination = _a.sent();
+                    _a.label = 8;
+                case 8:
+                    ;
+                    return [4 /*yield*/, getCombination_1.getCombination(cards, [])];
+                case 9:
                     combination = _a.sent();
                     socket.emit('combination', combination.descr);
                     socket.emit('player', player);

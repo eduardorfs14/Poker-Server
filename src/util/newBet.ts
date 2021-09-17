@@ -215,6 +215,6 @@ export async function newBet(
     socket.to(table.id).emit('min_bet', newMinBet);
     const { balance } = await prisma.users.update({ data: { balance: Math.floor(newBalance) }, where: { id: player.databaseId } });
     player.balance = balance;
-    emitCardsForEachSocket(table.sockets, table.players, table.cards);
+    emitCardsForEachSocket(table, table.cards);
     emitAllPlayersForEachSocket(table.sockets, table.players);
 }

@@ -253,7 +253,7 @@ function newBet(bet, player, table, socket, leftTable) {
                 case 11:
                     balance = (_a.sent()).balance;
                     player.balance = balance;
-                    emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players, table.cards);
+                    emitCardsForEachSocket_1.emitCardsForEachSocket(table, table.cards);
                     emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
                     return [2 /*return*/];
             }

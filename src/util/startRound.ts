@@ -117,7 +117,7 @@ export async function startRound(table: Table, socket: Socket, isNewRound: boole
   socket.to(table.id).emit('round_pot', table.roundPot);
   socket.to(table.id).emit('table_cards', table.cards);
   socket.to(table.id).emit('min_bet', minBet);
-  emitCardsForEachSocket(table.sockets, table.players);
+  emitCardsForEachSocket(table);
   emitAllPlayersForEachSocket(table.sockets, table.players);
 
   // Pegar o flop

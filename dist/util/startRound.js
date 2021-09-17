@@ -189,7 +189,7 @@ function startRound(table, socket, isNewRound, justFolded) {
             socket.to(table.id).emit('round_pot', table.roundPot);
             socket.to(table.id).emit('table_cards', table.cards);
             socket.to(table.id).emit('min_bet', minBet);
-            emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players);
+            emitCardsForEachSocket_1.emitCardsForEachSocket(table);
             emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
             getFlop();
             getTurn();

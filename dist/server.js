@@ -170,7 +170,7 @@ io.on('connection', function (socket) { return __awaiter(void 0, void 0, void 0,
                                         player.balance = res.balance;
                                         console.log(player.balance);
                                         emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
-                                        emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players, table.cards);
+                                        emitCardsForEachSocket_1.emitCardsForEachSocket(table, table.cards);
                                         return [2 /*return*/];
                                 }
                             });

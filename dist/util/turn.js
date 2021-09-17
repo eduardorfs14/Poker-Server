@@ -26,7 +26,7 @@ function turn(table, socket) {
     socket.emit('table_cards', turn);
     socket.to(table.id).emit('table_cards', turn);
     socket.to(table.id).emit('min_bet', minBet);
-    emitCardsForEachSocket_1.emitCardsForEachSocket(table.sockets, table.players, table.cards);
+    emitCardsForEachSocket_1.emitCardsForEachSocket(table, table.cards);
     emitAllPlayersForEachSocket_1.emitAllPlayersForEachSocket(table.sockets, table.players);
 }
 exports.turn = turn;
