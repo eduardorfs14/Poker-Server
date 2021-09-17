@@ -27,9 +27,7 @@ export function emitCardsForEachSocket(table: Table, tableCards?: string[]) {
       combination = await getCombination(cards, turn);
     } else if (table.flopStatus && table.turnStatus && table.riverStatus) {
       combination = await getCombination(cards, tableCards);
-    };
-
-    combination = await getCombination(cards, []);
+    }
     
     socket.emit('combination', combination.descr);
     socket.emit('player', player);

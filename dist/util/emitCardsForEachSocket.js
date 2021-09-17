@@ -78,10 +78,6 @@ function emitCardsForEachSocket(table, tableCards) {
                     combination = _a.sent();
                     _a.label = 8;
                 case 8:
-                    ;
-                    return [4 /*yield*/, getCombination_1.getCombination(cards, [])];
-                case 9:
-                    combination = _a.sent();
                     socket.emit('combination', combination.descr);
                     socket.emit('player', player);
                     return [2 /*return*/];
